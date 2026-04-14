@@ -1,0 +1,47 @@
+﻿<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Reader</title>
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="topbar-left">
+        <span id="library-path-text" class="topbar-title">尚未選擇書庫</span>
+      </div>
+      <div class="topbar-right">
+  <button id="fullscreen-btn" class="icon-button" aria-label="進入全螢幕" title="進入全螢幕">
+    <svg class="topbar-svg icon-fullscreen" viewBox="0 -960 960 960" aria-hidden="true">
+      <path
+        id="fullscreen-icon-path"
+        d="M120-120v-200h80v120h120v80H120Zm520 0v-80h120v-120h80v200H640ZM120-640v-200h200v80H200v120h-80Zm640 0v-120H640v-80h200v200h-80Z"
+        fill="currentColor">
+      </path>
+    </svg>
+  </button>
+
+  <button id="settings-btn" class="icon-button" aria-label="設定" title="設定">
+    <svg class="topbar-svg icon-settings" viewBox="0 -960 960 960" aria-hidden="true">
+      <path
+        d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm112-260q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Z"
+        fill="currentColor">
+      </path>
+    </svg>
+  </button>
+</div>
+    </header>
+
+    <main class="layout">
+      <section class="library-section">
+        <div id="book-grid" class="book-grid"></div>
+      </section>
+
+      <aside class="detail-panel" id="detail-panel">
+        <div class="detail-empty">請先選擇一本書</div>
+      </aside>
+    </main>
+  </div>
+</body>
+</html>

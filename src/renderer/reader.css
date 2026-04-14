@@ -1,0 +1,332 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --myreader-scrollbar-size: 12px;
+  --myreader-scrollbar-radius: 999px;
+  --myreader-scrollbar-track: rgba(255, 255, 255, 0.10);
+  --myreader-scrollbar-track-hover: rgba(255, 255, 255, 0.14);
+  --myreader-scrollbar-thumb: #666666;
+  --myreader-scrollbar-thumb-hover: #666666;
+  --myreader-scrollbar-border: rgba(255, 255, 255, 0.08);
+  --reader-toolbar-height: 50px;
+  --theme-accent: #666666;
+  --theme-app-bg: #050505;
+  --theme-text: #ffffff;
+  --theme-toolbar-bg: rgba(10, 10, 10, 0.35);
+  --theme-button-text: #ffffff;
+  --theme-border: rgba(255, 255, 255, 0.08);
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--theme-app-bg);
+  color: var(--theme-text);
+  font-family: "Microsoft JhengHei", sans-serif;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+}
+
+/* =========================================================
+   Toolbar
+   ========================================================= */
+.reader-toolbar {
+  position: fixed;
+  inset: 0 0 auto 0;
+  width: 100%;
+  height: var(--reader-toolbar-height);
+  z-index: 1000;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 0 20px;
+  background: var(--theme-toolbar-bg);
+  backdrop-filter: blur(10px);
+}
+
+.toolbar-left {
+  justify-self: start;
+}
+
+.toolbar-center {
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toolbar-right {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toolbar-btn,
+.toolbar-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  border-radius: 10px;
+  background: var(--theme-accent);
+  color: var(--theme-button-text);
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.toolbar-btn:hover,
+.toolbar-icon-btn:hover {
+  opacity: 0.9;
+}
+
+.toolbar-btn {
+  padding: 0 16px 0 8px;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.toolbar-icon-btn {
+  width: 44px;
+  min-width: 44px;
+  line-height: 1;
+}
+
+.toolbar-icon-btn:disabled {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.35);
+  cursor: not-allowed;
+}
+
+.toolbar-icon-btn:disabled:hover {
+  opacity: 1;
+}
+
+.toolbar-btn-icon {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.toolbar-btn-label {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  font-size: 14px;
+}
+
+.toolbar-svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.icon-back,
+.icon-favorite {
+  width: 18px;
+  height: 18px;
+}
+
+.favorite-toolbar-btn {
+  background: rgba(255, 79, 154, 0.4);
+  color: #ff4f9a;
+}
+
+.favorite-toolbar-btn.active {
+  background: rgba(255, 79, 154, 0.16);
+  color: #ff4f9a;
+}
+
+.toolbar-page-indicator {
+  min-width: 50px;
+  padding: 5px 16px;
+  text-align: center;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--theme-text);
+  font-size: 14px;
+}
+
+#mode-icon-outer {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+#mode-icon-inner {
+  fill: currentColor;
+}
+
+/* =========================================================
+   Reader Layout
+   ========================================================= */
+#reader-shell {
+  position: fixed;
+  top: var(--reader-toolbar-height);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--theme-app-bg);
+}
+
+#reader-container {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  background: var(--theme-app-bg);
+  color: var(--theme-text);
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--myreader-scrollbar-thumb) var(--myreader-scrollbar-track);
+}
+
+#reader-container::-webkit-scrollbar {
+  width: var(--myreader-scrollbar-size);
+  height: var(--myreader-scrollbar-size);
+}
+
+#reader-container::-webkit-scrollbar-track {
+  background: var(--myreader-scrollbar-track);
+  border-radius: var(--myreader-scrollbar-radius);
+}
+
+#reader-container::-webkit-scrollbar-thumb {
+  background: var(--myreader-scrollbar-thumb);
+  border-radius: var(--myreader-scrollbar-radius);
+  border: 1px solid var(--myreader-scrollbar-border);
+}
+
+#reader-container:hover::-webkit-scrollbar-track {
+  background: var(--myreader-scrollbar-track-hover);
+}
+
+#reader-container:hover::-webkit-scrollbar-thumb {
+  background: var(--myreader-scrollbar-thumb-hover);
+}
+
+/* =========================================================
+   Mode Classes
+   ========================================================= */
+#reader-container.paged-fit-height {
+  scroll-snap-type: y mandatory;
+  scroll-behavior: auto;
+}
+
+#reader-container.paged-fit-width {
+  scroll-snap-type: none;
+  scroll-behavior: auto;
+}
+
+#reader-container.scroll-mode {
+  scroll-snap-type: none;
+}
+
+/* =========================================================
+   Pages
+   ========================================================= */
+#pdf-pages {
+  width: 100%;
+  min-height: 100%;
+  padding: 0;
+  opacity: 1;
+}
+
+.pdf-page-wrapper {
+  width: 100%;
+  margin: 0 auto 8px auto;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  line-height: 0;
+  overflow: hidden;
+  scroll-snap-align: start;
+}
+
+#reader-container.paged-fit-height .pdf-page-wrapper {
+  min-height: calc(100vh - var(--reader-toolbar-height));
+  height: calc(100vh - var(--reader-toolbar-height));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#reader-container.paged-fit-width .pdf-page-wrapper,
+#reader-container.scroll-mode .pdf-page-wrapper {
+  min-height: auto;
+}
+
+/* PDF / CBZ 顯示本體 */
+.pdf-page-wrapper .pdf-canvas {
+  display: block;
+  width: auto;
+  height: calc(100vh - var(--reader-toolbar-height));
+  max-width: 100%;
+  max-height: none;
+  border-radius: 0;
+  background: #fff;
+}
+
+/* fit width 時，讓內容寬度貼齊容器，實際高度由 JS 決定 */
+#reader-container.paged-fit-width .pdf-page-wrapper .pdf-canvas,
+#reader-container.scroll-mode .pdf-page-wrapper .pdf-canvas {
+  max-width: 100%;
+}
+
+/* =========================================================
+   Loading / Placeholder
+   ========================================================= */
+.pdf-page-label {
+  display: none;
+}
+
+.pdf-page-placeholder,
+.pdf-loading {
+  padding: 40px 0;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* =========================================================
+   Fullscreen
+   ========================================================= */
+.fullscreen-mode .reader-toolbar,
+.fullscreen-mode #reader-title-bar {
+  display: none;
+}
+
+.fullscreen-mode #reader-shell {
+  top: 0;
+}
+
+.fullscreen-mode #reader-container {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.fullscreen-mode #reader-container::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.fullscreen-mode #reader-container.paged-fit-height .pdf-page-wrapper {
+  min-height: 100vh;
+  height: 100vh;
+}
+
+.fullscreen-mode .pdf-page-wrapper .pdf-canvas {
+  height: 100vh;
+}
