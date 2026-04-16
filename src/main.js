@@ -8,96 +8,7 @@ const { DEFAULT_THEME, normalizeThemeColor } = require('./renderer/theme');
 let mainWindow = null;
 let readerWindow = null;
 
-// ===== 視窗建立 =====
-/**
- * 建立主視窗
- */
-function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    minWidth: 1000,
-    minHeight: 700,
-    autoHideMenuBar: true,
-    webPreferences: {
-      preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
-      contextIsolation: true,
-      nodeIntegration: false
-    }
-  });
-
-  // ===== CSP（目前保留註解，不啟用） =====
-  // 在視窗建立後、loadURL 前，注入 CSP
-  // mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-  //   callback({
-  //     responseHeaders: {
-  //       ...details.responseHeaders,
-  //       'Content-Security-Policy': [
-  //         `
-  //         default-src 'self' data: myreader-cover: http://localhost:3000 ws://localhost:3000;
-  //         script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:3000;
-  //         style-src 'self' 'unsafe-inline';
-  //         img-src 'self' data: myreader-cover:;
-  //         connect-src 'self' http://localhost:3000 ws://localhost:3000;
-  //         `,
-  //       ],
-  //     },
-  //   });
-  // });
-
-  const currentSettings = getAppSettings();
-  const mainUrl = appendThemeQuery(MAIN_WINDOW_WEBPACK_ENTRY, currentSettings);
-  mainWindow.loadURL(mainUrl);
-
-  // ===== DevTools（正式使用先關閉） =====
-  // mainWindow.webContents.openDevTools();
-}
-
-/**
- * 建立閱讀視窗
- */
-function createReaderWindow(filePath, title) {
-  const encodedFilePath = encodeURIComponent(filePath);
-  const encodedTitle = encodeURIComponent(title);
-
-  readerWindow = new BrowserWindow({
-    width: 1200,
-    height: 900,
-    minWidth: 900,
-    minHeight: 700,
-    autoHideMenuBar: true,
-    title: `My Reader - ${title}`,
-    webPreferences: {
-      preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
-      contextIsolation: true,
-      nodeIntegration: false
-    }
-  });
-
-  const currentSettings = getAppSettings();
-  const safeTheme =
-  currentSettings?.appearanceTheme === 'light'
-    ? 'light'
-    : DEFAULT_THEME.appearanceTheme;
-  const safeAccent = normalizeThemeColor(
-    currentSettings?.accentColor,
-    DEFAULT_THEME.accentColor
-  );
-
-  const readerUrl =
-  `${READER_WINDOW_WEBPACK_ENTRY}?filePath=${encodedFilePath}` +
-  `&title=${encodedTitle}` +
-  `&theme=${encodeURIComponent(safeTheme)}` +
-  `&accent=${encodeURIComponent(safeAccent)}`;
-
-  readerWindow.loadURL(readerUrl);
-
-  readerWindow.on('closed', () => {
-    readerWindow = null;
-  });
-}
-
-// ===== 書籍工具函式 =====
+// ===== 基本工具函式 =====
 /**
  * 判斷副檔名是否為支援格式
  */
@@ -124,7 +35,50 @@ function getBookFileStat(filePath) {
   };
 }
 
-// ===== 書庫資料夾與索引 =====
+/**
+ * 正規化主題色歷史陣列
+ */
+function normalizeThemeColorList(value, maxLength) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const result = [];
+
+  value.forEach((item) => {
+    const normalized = normalizeThemeColor(item, DEFAULT_THEME.accentColor);
+
+    if (!result.includes(normalized)) {
+      result.push(normalized);
+    }
+  });
+
+  return result.slice(0, maxLength);
+}
+
+/**
+ * 正規化背景模式
+ */
+function normalizeBackgroundMode(value) {
+  return ['none', 'selectedBookCover', 'importedImage'].includes(value)
+    ? value
+    : 'none';
+}
+
+/**
+ * 數值夾取工具
+ */
+function clampNumber(value, min, max, fallback) {
+  const numberValue = Number(value);
+
+  if (!Number.isFinite(numberValue)) {
+    return fallback;
+  }
+
+  return Math.min(max, Math.max(min, numberValue));
+}
+
+// ===== 書庫索引與快取目錄 =====
 /**
  * 確保 .myreader 相關資料夾與索引檔存在
  */
@@ -175,7 +129,6 @@ function saveLibraryIndex(folderPath, data) {
   fs.writeFileSync(libraryJsonPath, JSON.stringify(data, null, 2), 'utf-8');
 }
 
-// ===== 封面快取工具 =====
 /**
  * 依書籍路徑與寬度取得封面檔案路徑
  */
@@ -191,7 +144,7 @@ function getCoverFilePath(filePath, width) {
   return path.join(coversDir, `${hash}_${width}.jpg`);
 }
 
-// ===== PDF 頁面快取工具 =====
+// ===== PDF 頁面快取 =====
 /**
  * 確保 PDF 頁面快取目錄存在
  */
@@ -242,18 +195,18 @@ function getPdfPageCacheFilePath({
   const safeWidth = Math.round(Number(viewerWidth) || 0);
   const safeHeight = Math.round(Number(viewerHeight) || 0);
   const safeDpr = Number.isFinite(Number(dpr)) ? Number(dpr) : 1;
-  const safeRenderScaleMultiplier =
-  Number.isFinite(Number(renderScaleMultiplier))
+  const safeRenderScaleMultiplier = Number.isFinite(Number(renderScaleMultiplier))
     ? Number(renderScaleMultiplier)
     : 1;
 
   const fileName =
-  `${safeFitMode}_${safeWidth}x${safeHeight}_dpr${safeDpr}_rs${safeRenderScaleMultiplier}_page_${safePageNumber}.webp`;
+    `${safeFitMode}_${safeWidth}x${safeHeight}` +
+    `_dpr${safeDpr}_rs${safeRenderScaleMultiplier}_page_${safePageNumber}.webp`;
 
   return path.join(bookDir, fileName);
 }
 
-// ===== App 狀態工具 =====
+// ===== App 狀態 =====
 /**
  * 取得 app-state.json 路徑
  */
@@ -261,29 +214,8 @@ function getAppStateFilePath() {
   return path.join(app.getPath('userData'), 'app-state.json');
 }
 
-function normalizeThemeColorList(value, maxLength) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  const result = [];
-
-  value.forEach((item) => {
-    const normalized = normalizeThemeColor(item, DEFAULT_THEME.accentColor);
-
-    if (!result.includes(normalized)) {
-      result.push(normalized);
-    }
-  });
-
-  return result.slice(0, maxLength);
-}
-
 /**
  * 讀取 app 狀態
- * 目前包含：
- * 1. 上次開啟的書庫資料夾
- * 2. 各書籍的閱讀進度
  */
 function loadAppState() {
   const stateFilePath = getAppStateFilePath();
@@ -291,6 +223,7 @@ function loadAppState() {
   if (!fs.existsSync(stateFilePath)) {
     return {
       lastLibraryFolder: '',
+      lastSelectedBookPath: '',
       readingProgress: {},
       bookTags: {},
       settings: {
@@ -302,6 +235,10 @@ function loadAppState() {
         accentColor: DEFAULT_THEME.accentColor,
         customColorHistory: [],
         savedColorHistory: [],
+        backgroundMode: 'none',
+        backgroundImagePath: '',
+        backgroundOpacity: 16,
+        backgroundBlur: 2,
       },
       recentReading: [],
     };
@@ -313,6 +250,10 @@ function loadAppState() {
 
     return {
       lastLibraryFolder: parsed.lastLibraryFolder || '',
+      lastSelectedBookPath:
+        typeof parsed.lastSelectedBookPath === 'string'
+          ? parsed.lastSelectedBookPath
+          : '',
       readingProgress: parsed.readingProgress || {},
       bookTags: parsed.bookTags || {},
       recentReading: Array.isArray(parsed.recentReading) ? parsed.recentReading : [],
@@ -320,26 +261,34 @@ function loadAppState() {
         displayLibraryName: parsed.settings?.displayLibraryName || '',
         autoPlaySeconds: Math.max(1, Number(parsed.settings?.autoPlaySeconds) || 5),
         bookSortMode: ['none', 'favorite', 'unread', 'completedLast'].includes(parsed.settings?.bookSortMode)
-        ? parsed.settings.bookSortMode
-        : 'none',
+          ? parsed.settings.bookSortMode
+          : 'none',
         readingHistoryVisibility: parsed.settings?.readingHistoryVisibility === 'shown'
-        ? 'shown'
-        : 'hidden',
+          ? 'shown'
+          : 'hidden',
         appearanceTheme: parsed.settings?.appearanceTheme === 'light'
-        ? 'light'
-        : DEFAULT_THEME.appearanceTheme,
+          ? 'light'
+          : DEFAULT_THEME.appearanceTheme,
         accentColor: normalizeThemeColor(
           parsed.settings?.accentColor,
           DEFAULT_THEME.accentColor
         ),
         customColorHistory: normalizeThemeColorList(parsed.settings?.customColorHistory, 5),
         savedColorHistory: normalizeThemeColorList(parsed.settings?.savedColorHistory, 6),
+        backgroundMode: normalizeBackgroundMode(parsed.settings?.backgroundMode),
+        backgroundImagePath:
+          typeof parsed.settings?.backgroundImagePath === 'string'
+            ? parsed.settings.backgroundImagePath
+            : '',
+        backgroundOpacity: clampNumber(parsed.settings?.backgroundOpacity, 0, 100, 16),
+        backgroundBlur: clampNumber(parsed.settings?.backgroundBlur, 0, 40, 2),
       },
     };
   } catch (error) {
     console.error('讀取 app-state.json 失敗:', error);
     return {
       lastLibraryFolder: '',
+      lastSelectedBookPath: '',
       readingProgress: {},
       bookTags: {},
       settings: {
@@ -351,7 +300,11 @@ function loadAppState() {
         accentColor: DEFAULT_THEME.accentColor,
         customColorHistory: [],
         savedColorHistory: [],
-        },
+        backgroundMode: 'none',
+        backgroundImagePath: '',
+        backgroundOpacity: 16,
+        backgroundBlur: 2,
+      },
       recentReading: [],
     };
   }
@@ -365,6 +318,7 @@ function saveAppState(state) {
   fs.writeFileSync(stateFilePath, JSON.stringify(state, null, 2), 'utf-8');
 }
 
+// ===== 廣播事件 =====
 function broadcastSettingsUpdate(settings) {
   const windows = BrowserWindow.getAllWindows();
 
@@ -389,21 +343,34 @@ function broadcastReadingProgressUpdate(payload) {
   });
 }
 
-/**
- * 儲存上次開啟的書庫資料夾
- */
+// ===== App 狀態讀寫：書庫 / 書籍 / 設定 =====
 function saveLastLibraryFolder(folderPath) {
   const state = loadAppState();
   state.lastLibraryFolder = folderPath || '';
   saveAppState(state);
 }
 
-/**
- * 取得上次開啟的書庫資料夾
- */
 function getLastLibraryFolder() {
   const state = loadAppState();
   return state.lastLibraryFolder || '';
+}
+
+function saveLastSelectedBook(filePath) {
+  const state = loadAppState();
+  state.lastSelectedBookPath = typeof filePath === 'string' ? filePath : '';
+  saveAppState(state);
+  return state.lastSelectedBookPath;
+}
+
+function getLastSelectedBook() {
+  const state = loadAppState();
+  const filePath = state.lastSelectedBookPath || '';
+
+  if (!filePath || !fs.existsSync(filePath)) {
+    return '';
+  }
+
+  return filePath;
 }
 
 function getAppSettings() {
@@ -413,23 +380,102 @@ function getAppSettings() {
     displayLibraryName: state.settings?.displayLibraryName || '',
     autoPlaySeconds: Math.max(1, Number(state.settings?.autoPlaySeconds) || 5),
     bookSortMode: ['none', 'favorite', 'unread', 'completedLast'].includes(state.settings?.bookSortMode)
-    ? state.settings.bookSortMode
-    : 'none',
+      ? state.settings.bookSortMode
+      : 'none',
     readingHistoryVisibility: state.settings?.readingHistoryVisibility === 'shown'
-    ? 'shown'
-    : 'hidden',
+      ? 'shown'
+      : 'hidden',
     appearanceTheme: state.settings?.appearanceTheme === 'light'
-    ? 'light'
-    : DEFAULT_THEME.appearanceTheme,
+      ? 'light'
+      : DEFAULT_THEME.appearanceTheme,
     accentColor: normalizeThemeColor(
       state.settings?.accentColor,
       DEFAULT_THEME.accentColor
     ),
     customColorHistory: normalizeThemeColorList(state.settings?.customColorHistory, 5),
     savedColorHistory: normalizeThemeColorList(state.settings?.savedColorHistory, 6),
+    backgroundMode: normalizeBackgroundMode(state.settings?.backgroundMode),
+    backgroundImagePath: state.settings?.backgroundImagePath || '',
+    backgroundOpacity: clampNumber(state.settings?.backgroundOpacity, 0, 100, 16),
+    backgroundBlur: clampNumber(state.settings?.backgroundBlur, 0, 40, 2),
   };
 }
 
+function saveAppSettings(settings = {}) {
+  const state = loadAppState();
+
+  state.settings = {
+    displayLibraryName:
+      typeof settings.displayLibraryName === 'string'
+        ? settings.displayLibraryName
+        : state.settings?.displayLibraryName || '',
+
+    autoPlaySeconds: Math.max(
+      1,
+      Number(settings.autoPlaySeconds ?? state.settings?.autoPlaySeconds ?? 5) || 5
+    ),
+
+    bookSortMode: ['none', 'favorite', 'unread', 'completedLast'].includes(settings.bookSortMode)
+      ? settings.bookSortMode
+      : state.settings?.bookSortMode || 'none',
+
+    readingHistoryVisibility:
+      settings.readingHistoryVisibility === 'shown'
+        ? 'shown'
+        : 'hidden',
+
+    appearanceTheme:
+      settings.appearanceTheme === 'light'
+        ? 'light'
+        : DEFAULT_THEME.appearanceTheme,
+
+    accentColor: normalizeThemeColor(
+      settings.accentColor ?? state.settings?.accentColor ?? DEFAULT_THEME.accentColor,
+      DEFAULT_THEME.accentColor
+    ),
+
+    customColorHistory: normalizeThemeColorList(
+      settings.customColorHistory ?? state.settings?.customColorHistory ?? [],
+      5
+    ),
+
+    savedColorHistory: normalizeThemeColorList(
+      settings.savedColorHistory ?? state.settings?.savedColorHistory ?? [],
+      6
+    ),
+
+    backgroundMode: normalizeBackgroundMode(
+      settings.backgroundMode ?? state.settings?.backgroundMode ?? 'none'
+    ),
+
+    backgroundImagePath:
+      typeof settings.backgroundImagePath === 'string'
+        ? settings.backgroundImagePath
+        : state.settings?.backgroundImagePath || '',
+
+    backgroundOpacity: clampNumber(
+      settings.backgroundOpacity ?? state.settings?.backgroundOpacity ?? 16,
+      0,
+      100,
+      16
+    ),
+
+    backgroundBlur: clampNumber(
+      settings.backgroundBlur ?? state.settings?.backgroundBlur ?? 2,
+      0,
+      40,
+      2
+    ),
+  };
+
+  saveAppState(state);
+  broadcastSettingsUpdate(state.settings);
+  return state.settings;
+}
+
+/**
+ * 在 URL 上附加主題參數
+ */
 function appendThemeQuery(url, settings) {
   const safeTheme =
     settings?.appearanceTheme === 'light'
@@ -446,51 +492,7 @@ function appendThemeQuery(url, settings) {
   return `${url}${separator}theme=${encodeURIComponent(safeTheme)}&accent=${encodeURIComponent(safeAccent)}`;
 }
 
-function saveAppSettings(settings = {}) {
-  const state = loadAppState();
-
-  state.settings = {
-    displayLibraryName:
-      typeof settings.displayLibraryName === 'string'
-        ? settings.displayLibraryName
-        : state.settings?.displayLibraryName || '',
-    autoPlaySeconds: Math.max(
-      1,
-      Number(settings.autoPlaySeconds ?? state.settings?.autoPlaySeconds ?? 5) || 5
-    ),
-    bookSortMode: ['none', 'favorite', 'unread', 'completedLast'].includes(settings.bookSortMode)
-    ? settings.bookSortMode
-    : state.settings?.bookSortMode || 'none',
-    readingHistoryVisibility: settings.readingHistoryVisibility === 'shown'
-    ? 'shown'
-    : 'hidden',
-    appearanceTheme: settings.appearanceTheme === 'light'
-    ? 'light'
-    : DEFAULT_THEME.appearanceTheme,
-    accentColor: normalizeThemeColor(
-      settings.accentColor ?? state.settings?.accentColor ?? DEFAULT_THEME.accentColor,
-      DEFAULT_THEME.accentColor
-    ),
-    customColorHistory: normalizeThemeColorList(
-      settings.customColorHistory ?? state.settings?.customColorHistory ?? [],
-      5
-    ),
-
-    savedColorHistory: normalizeThemeColorList(
-      settings.savedColorHistory ?? state.settings?.savedColorHistory ?? [],
-      6
-    ),
-  };
-
-  saveAppState(state);
-  broadcastSettingsUpdate(state.settings);
-  return state.settings;
-}
-
-/**
- * 讀取指定書籍的閱讀進度
- * 若檔案不存在，或大小 / 修改時間對不上，就視為無效
- */
+// ===== 閱讀進度 / 標籤 / 最近閱讀 =====
 function getReadingProgress(filePath) {
   const state = loadAppState();
   const record = state.readingProgress?.[filePath];
@@ -517,9 +519,6 @@ function getReadingProgress(filePath) {
   }
 }
 
-/**
- * 儲存指定書籍的閱讀進度
- */
 function saveReadingProgress(filePath, page, totalPages) {
   if (!filePath || !fs.existsSync(filePath)) {
     return false;
@@ -532,7 +531,6 @@ function saveReadingProgress(filePath, page, totalPages) {
   const state = loadAppState();
 
   state.readingProgress = state.readingProgress || {};
-
   const previousRecord = state.readingProgress[filePath] || {};
 
   const nextCompleted =
@@ -567,10 +565,8 @@ function markBookAsStarted(filePath) {
   const stat = getBookFileStat(filePath);
 
   state.readingProgress = state.readingProgress || {};
-
   const previousRecord = state.readingProgress[filePath] || {};
 
-  // 若本來就有閱讀紀錄，就不覆蓋既有頁碼
   if (previousRecord && typeof previousRecord.page === 'number') {
     return true;
   }
@@ -639,7 +635,7 @@ function setBookFavorite(filePath, isFavorite) {
     tags: nextTags,
   });
 
-return nextTags;
+  return nextTags;
 }
 
 function recordRecentReading(filePath) {
@@ -663,7 +659,9 @@ function getRecentReading() {
   const state = loadAppState();
   const list = Array.isArray(state.recentReading) ? state.recentReading : [];
 
-  return list.filter((filePath) => filePath && fs.existsSync(filePath)).slice(0, 10);
+  return list
+    .filter((filePath) => filePath && fs.existsSync(filePath))
+    .slice(0, 10);
 }
 
 // ===== 書庫掃描 =====
@@ -694,7 +692,6 @@ async function scanLibrary(folderPath) {
     const ext = path.extname(entry.name).toLowerCase();
     const title = getBookTitle(entry.name);
     const stat = getBookFileStat(fullPath);
-
     const oldRecord = existingMap.get(fullPath);
 
     let covers = {};
@@ -728,7 +725,95 @@ async function scanLibrary(folderPath) {
   return books;
 }
 
-// ===== 自訂 protocol 註冊 =====
+// ===== 視窗建立 =====
+/**
+ * 建立主視窗
+ */
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    minWidth: 1000,
+    minHeight: 700,
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  // ===== CSP（目前保留註解，不啟用） =====
+  // mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+  //   callback({
+  //     responseHeaders: {
+  //       ...details.responseHeaders,
+  //       'Content-Security-Policy': [
+  //         `
+  //         default-src 'self' data: myreader-cover: http://localhost:3000 ws://localhost:3000;
+  //         script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:3000;
+  //         style-src 'self' 'unsafe-inline';
+  //         img-src 'self' data: myreader-cover:;
+  //         connect-src 'self' http://localhost:3000 ws://localhost:3000;
+  //         `,
+  //       ],
+  //     },
+  //   });
+  // });
+
+  const currentSettings = getAppSettings();
+  const mainUrl = appendThemeQuery(MAIN_WINDOW_WEBPACK_ENTRY, currentSettings);
+  mainWindow.loadURL(mainUrl);
+
+  // mainWindow.webContents.openDevTools();
+}
+
+/**
+ * 建立閱讀視窗
+ */
+function createReaderWindow(filePath, title) {
+  const encodedFilePath = encodeURIComponent(filePath);
+  const encodedTitle = encodeURIComponent(title);
+
+  readerWindow = new BrowserWindow({
+    width: 1200,
+    height: 900,
+    minWidth: 900,
+    minHeight: 700,
+    autoHideMenuBar: true,
+    title: `My Reader - ${title}`,
+    webPreferences: {
+      preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  const currentSettings = getAppSettings();
+  const safeTheme =
+    currentSettings?.appearanceTheme === 'light'
+      ? 'light'
+      : DEFAULT_THEME.appearanceTheme;
+
+  const safeAccent = normalizeThemeColor(
+    currentSettings?.accentColor,
+    DEFAULT_THEME.accentColor
+  );
+
+  const readerUrl =
+    `${READER_WINDOW_WEBPACK_ENTRY}?filePath=${encodedFilePath}` +
+    `&title=${encodedTitle}` +
+    `&theme=${encodeURIComponent(safeTheme)}` +
+    `&accent=${encodeURIComponent(safeAccent)}`;
+
+  readerWindow.loadURL(readerUrl);
+
+  readerWindow.on('closed', () => {
+    readerWindow = null;
+  });
+}
+
+// ===== 自訂 protocol =====
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'myreader-cover',
@@ -741,8 +826,10 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
-// ===== App 初始化 =====
-app.whenReady().then(() => {
+/**
+ * 註冊 myreader-cover protocol
+ */
+function registerMyReaderProtocol() {
   protocol.handle('myreader-cover', async (request) => {
     try {
       const url = new URL(request.url);
@@ -754,12 +841,14 @@ app.whenReady().then(() => {
 
       const filePath = decodeURIComponent(encodedPath);
       const data = fs.readFileSync(filePath);
-
       const ext = path.extname(filePath).toLowerCase();
+
       const contentType =
-        ext === '.png' ? 'image/png' :
-        ext === '.webp' ? 'image/webp' :
-        'image/jpeg';
+        ext === '.png'
+          ? 'image/png'
+          : ext === '.webp'
+            ? 'image/webp'
+            : 'image/jpeg';
 
       return new Response(data, {
         status: 200,
@@ -773,13 +862,13 @@ app.whenReady().then(() => {
       return new Response('File load failed', { status: 404 });
     }
   });
+}
 
-  createWindow();
-
-  // ===== IPC：選擇書庫資料夾 =====
+// ===== IPC 註冊 =====
+function registerFolderIpc() {
   ipcMain.handle('pick-library-folder', async () => {
     const result = await dialog.showOpenDialog({
-      properties: ['openDirectory']
+      properties: ['openDirectory'],
     });
 
     if (result.canceled || result.filePaths.length === 0) {
@@ -789,21 +878,6 @@ app.whenReady().then(() => {
     return result.filePaths[0];
   });
 
-  // ===== IPC：掃描書庫 =====
-  ipcMain.handle('scan-library', async (_event, folderPath) => {
-    return await scanLibrary(folderPath);
-  });
-
-  // ===== IPC：App 設定 =====
-  ipcMain.handle('get-app-settings', async () => {
-    return getAppSettings();
-  });
-
-  ipcMain.handle('save-app-settings', async (_event, settings) => {
-    return saveAppSettings(settings);
-  });
-
-  // ===== IPC：取得上次書庫 =====
   ipcMain.handle('get-last-library-folder', async () => {
     const folderPath = getLastLibraryFolder();
 
@@ -814,33 +888,99 @@ app.whenReady().then(() => {
     return folderPath;
   });
 
+  ipcMain.handle('scan-library', async (_event, folderPath) => {
+    return await scanLibrary(folderPath);
+  });
+}
+
+function registerSettingsIpc() {
+  ipcMain.handle('get-app-settings', async () => {
+    return getAppSettings();
+  });
+
+  ipcMain.handle('save-app-settings', async (_event, settings) => {
+    return saveAppSettings(settings);
+  });
+}
+
+function registerBackgroundIpc() {
+  ipcMain.handle('pick-background-image', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [
+        {
+          name: 'Images',
+          extensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp'],
+        },
+      ],
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return '';
+    }
+
+    return result.filePaths[0];
+  });
+
+  ipcMain.handle('get-last-selected-book', async () => {
+    return getLastSelectedBook();
+  });
+
+  ipcMain.handle('save-last-selected-book', async (_event, filePath) => {
+    return saveLastSelectedBook(filePath);
+  });
+
+  ipcMain.handle('read-image-data', async (_event, filePath) => {
+    try {
+      if (!filePath || !fs.existsSync(filePath)) {
+        return null;
+      }
+
+      const buffer = fs.readFileSync(filePath);
+      const ext = path.extname(filePath).toLowerCase();
+
+      let mimeType = 'image/jpeg';
+      if (ext === '.png') mimeType = 'image/png';
+      else if (ext === '.webp') mimeType = 'image/webp';
+      else if (ext === '.bmp') mimeType = 'image/bmp';
+      else if (ext === '.gif') mimeType = 'image/gif';
+
+      const base64 = buffer.toString('base64');
+      return `data:${mimeType};base64,${base64}`;
+    } catch (error) {
+      console.error('讀取背景圖片失敗:', error);
+      return null;
+    }
+  });
+}
+
+function registerNavigationIpc() {
   ipcMain.handle('open-settings-page', async (event) => {
-  const win = BrowserWindow.fromWebContents(event.sender);
-  if (!win) return false;
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) return false;
 
-  const settingsUrl = appendThemeQuery(
-    SETTING_WINDOW_WEBPACK_ENTRY,
-    getAppSettings()
-  );
+    const settingsUrl = appendThemeQuery(
+      SETTING_WINDOW_WEBPACK_ENTRY,
+      getAppSettings()
+    );
 
-  await win.loadURL(settingsUrl);
-  return true;
+    await win.loadURL(settingsUrl);
+    return true;
   });
 
   ipcMain.handle('open-library-page', async (event) => {
-  const win = BrowserWindow.fromWebContents(event.sender);
-  if (!win) return false;
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) return false;
 
-  const mainUrl = appendThemeQuery(
-    MAIN_WINDOW_WEBPACK_ENTRY,
-    getAppSettings()
-  );
+    const mainUrl = appendThemeQuery(
+      MAIN_WINDOW_WEBPACK_ENTRY,
+      getAppSettings()
+    );
 
-  await win.loadURL(mainUrl);
-  return true;
+    await win.loadURL(mainUrl);
+    return true;
   });
 
-  // ===== IPC：切換全螢幕 =====
   ipcMain.handle('toggle-fullscreen', async (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (!win) return false;
@@ -849,33 +989,32 @@ app.whenReady().then(() => {
     win.setFullScreen(nextState);
     return nextState;
   });
+}
 
-  // ===== IPC：開啟閱讀視窗 =====
+function registerReaderIpc() {
   ipcMain.handle('open-reader-window', async (_event, book) => {
-  recordRecentReading(book.filePath);
-
-  markBookAsStarted(book.filePath);
-
-  createReaderWindow(book.filePath, book.title);
-  return true;
+    recordRecentReading(book.filePath);
+    markBookAsStarted(book.filePath);
+    createReaderWindow(book.filePath, book.title);
+    return true;
   });
 
   ipcMain.handle('get-recent-reading', async () => {
-  return getRecentReading();
+    return getRecentReading();
   });
+}
 
-  // ===== IPC：讀取 PDF / CBZ 原始檔 =====
+function registerFileReadIpc() {
   ipcMain.handle('read-pdf-file', async (_event, filePath) => {
-    const buffer = fs.readFileSync(filePath);
-    return buffer;
+    return fs.readFileSync(filePath);
   });
 
   ipcMain.handle('read-cbz-file', async (_event, filePath) => {
-    const buffer = fs.readFileSync(filePath);
-    return buffer;
+    return fs.readFileSync(filePath);
   });
+}
 
-  // ===== IPC：封面快取 =====
+function registerCoverIpc() {
   ipcMain.handle('get-cover', async (_event, { filePath, width }) => {
     const coverPath = getCoverFilePath(filePath, width);
 
@@ -888,7 +1027,6 @@ app.whenReady().then(() => {
 
   ipcMain.handle('save-cover', async (_event, { filePath, buffer, width }) => {
     const coverPath = getCoverFilePath(filePath, width);
-
     fs.writeFileSync(coverPath, Buffer.from(buffer));
 
     const folderPath = path.dirname(filePath);
@@ -941,8 +1079,9 @@ app.whenReady().then(() => {
       return null;
     }
   });
+}
 
-  // ===== IPC：PDF 頁面快取 =====
+function registerPdfCacheIpc() {
   ipcMain.handle('get-pdf-page-cache', async (_event, payload) => {
     try {
       const cachePath = getPdfPageCacheFilePath(payload);
@@ -982,25 +1121,44 @@ app.whenReady().then(() => {
       return { success: false, error: error.message };
     }
   });
+}
 
-  // ===== IPC：閱讀進度 =====
+function registerProgressAndTagsIpc() {
   ipcMain.handle('get-reading-progress', async (_event, filePath) => {
-  return getReadingProgress(filePath);
+    return getReadingProgress(filePath);
   });
 
   ipcMain.handle('save-reading-progress', async (_event, { filePath, page, totalPages }) => {
-  return saveReadingProgress(filePath, page, totalPages);
+    return saveReadingProgress(filePath, page, totalPages);
   });
 
   ipcMain.handle('get-book-tags', async (_event, filePath) => {
-  return getBookTags(filePath);
+    return getBookTags(filePath);
   });
 
   ipcMain.handle('set-book-favorite', async (_event, { filePath, isFavorite }) => {
-  return setBookFavorite(filePath, isFavorite);
+    return setBookFavorite(filePath, isFavorite);
   });
+}
 
-  // ===== macOS：重新啟用 app 時補建主視窗 =====
+function registerAllIpcHandlers() {
+  registerFolderIpc();
+  registerSettingsIpc();
+  registerBackgroundIpc();
+  registerNavigationIpc();
+  registerReaderIpc();
+  registerFileReadIpc();
+  registerCoverIpc();
+  registerPdfCacheIpc();
+  registerProgressAndTagsIpc();
+}
+
+// ===== App 生命週期 =====
+app.whenReady().then(() => {
+  registerMyReaderProtocol();
+  createWindow();
+  registerAllIpcHandlers();
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
@@ -1008,7 +1166,6 @@ app.whenReady().then(() => {
   });
 });
 
-// ===== App 關閉 =====
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();

@@ -8,6 +8,10 @@ contextBridge.exposeInMainWorld('readerAPI', {
   getAppSettings: () => ipcRenderer.invoke('get-app-settings'),
   saveAppSettings: (settings) => ipcRenderer.invoke('save-app-settings', settings),
 
+  pickBackgroundImage: () => ipcRenderer.invoke('pick-background-image'),
+  getLastSelectedBook: () => ipcRenderer.invoke('get-last-selected-book'),
+  saveLastSelectedBook: (filePath) => ipcRenderer.invoke('save-last-selected-book', filePath),
+
   onAppSettingsUpdated: (callback) => {
     ipcRenderer.on('app-settings-updated', (_event, settings) => {
       callback(settings);
@@ -27,6 +31,8 @@ contextBridge.exposeInMainWorld('readerAPI', {
     ipcRenderer.invoke('save-cover', { filePath, buffer, width }),
   readCoverData: (filePath, width) =>
     ipcRenderer.invoke('read-cover-data', { filePath, width }),
+  readImageData: (filePath) =>
+  ipcRenderer.invoke('read-image-data', filePath),
 
   getPdfPageCache: (payload) => ipcRenderer.invoke('get-pdf-page-cache', payload),
   savePdfPageCache: (payload) => ipcRenderer.invoke('save-pdf-page-cache', payload),

@@ -9,6 +9,11 @@ const {
   applySettingTheme,
 } = themeModule;
 
+// ===== 初始主題 =====
+/**
+ * 從網址參數取得初始主題設定
+ * 讓設定頁在載入時就先套用正確主題，避免閃爍
+ */
 function getInitialThemeFromQuery() {
   const params = new URLSearchParams(window.location.search);
 
@@ -33,7 +38,7 @@ applySettingTheme(
   initialTheme.accentColor
 );
 
-// ===== 取得畫面元素 =====
+// ===== DOM 元素 =====
 const backBtn = document.getElementById('back-btn');
 const fullscreenBtn = document.getElementById('fullscreen-btn');
 const settingsMenu = document.getElementById('settings-menu');
@@ -44,6 +49,7 @@ const fullscreenIconPath = document.getElementById('fullscreen-icon-path');
 let currentLibraryPath = '';
 let isFullscreen = false;
 let activeSection = 'library';
+
 let settings = {
   displayLibraryName: '',
   autoPlaySeconds: 5,
@@ -53,31 +59,13 @@ let settings = {
   accentColor: DEFAULT_THEME.accentColor,
   customColorHistory: [],
   savedColorHistory: [],
+  backgroundMode: 'none',
+  backgroundImagePath: '',
+  backgroundOpacity: 16,
+  backgroundBlur: 2,
 };
 
-// ===== 共用工具函式 =====
-/**
- * 取得目前書庫顯示名稱
- * 若有自訂名稱，優先顯示自訂名稱
- * 否則顯示完整書庫路徑
- */
-function getDisplayLibraryName() {
-  const customName = (settings.displayLibraryName || '').trim();
-  return customName || currentLibraryPath || '尚未選擇書庫';
-}
-
-/**
- * 更新左側選單的 active 狀態
- */
-function renderMenuState() {
-  const items = settingsMenu?.querySelectorAll('.settings-item') || [];
-
-  items.forEach((item) => {
-    item.classList.toggle('active', item.dataset.section === activeSection);
-  });
-}
-
-// ===== 主題工具 =====
+// ===== 個人主題暫存狀態 =====
 let appearancePreviewTheme = null;
 let appearancePreviewAccentColor = null;
 let appearanceDraftCustomColor = null;
@@ -88,10 +76,62 @@ let appearanceSelectedCustomSlotIndex = -1;
 let appearanceSelectedSavedSlotIndex = -1;
 let appearanceSelectionSource = 'classic';
 
+// ===== 基本工具函式 =====
+/**
+ * 取得目前書庫顯示名稱
+ * 優先使用自訂名稱，否則顯示書庫路徑
+ */
+function getDisplayLibraryName() {
+  const customName = (settings.displayLibraryName || '').trim();
+  return customName || currentLibraryPath || '尚未選擇書庫';
+}
+
+/**
+ * 更新左側選單 active 狀態
+ */
+function renderMenuState() {
+  const items = settingsMenu?.querySelectorAll('.settings-item') || [];
+
+  items.forEach((item) => {
+    item.classList.toggle('active', item.dataset.section === activeSection);
+  });
+}
+
+/**
+ * 正規化背景模式
+ */
+function normalizeBackgroundMode(mode) {
+  return ['none', 'selectedBookCover', 'importedImage'].includes(mode)
+    ? mode
+    : 'none';
+}
+
+/**
+ * 數值夾取工具
+ */
+function clampNumber(value, min, max, fallback) {
+  const numberValue = Number(value);
+
+  if (!Number.isFinite(numberValue)) {
+    return fallback;
+  }
+
+  return Math.min(max, Math.max(min, numberValue));
+}
+
+// ===== 主題工具 =====
+/**
+ * 取得目前應顯示的系統主題
+ * 若有預覽中的主題則優先使用預覽值
+ */
 function getEffectiveAppearanceTheme() {
   return appearancePreviewTheme || settings.appearanceTheme || DEFAULT_THEME.appearanceTheme;
 }
 
+/**
+ * 取得目前應顯示的主題色
+ * 若有預覽中的顏色則優先使用預覽值
+ */
 function getEffectiveAccentColor() {
   return normalizeThemeColor(
     appearancePreviewAccentColor || settings.accentColor || DEFAULT_THEME.accentColor,
@@ -99,6 +139,9 @@ function getEffectiveAccentColor() {
   );
 }
 
+/**
+ * 套用主題預覽
+ */
 function applyThemePreview(themeName, accentColor) {
   applySettingTheme(
     document.documentElement,
@@ -110,6 +153,9 @@ function applyThemePreview(themeName, accentColor) {
   document.body.classList.toggle('dark-theme', themeName !== 'light');
 }
 
+/**
+ * 套用目前已儲存的主題
+ */
 function applySavedTheme() {
   applyThemePreview(
     settings.appearanceTheme || DEFAULT_THEME.appearanceTheme,
@@ -117,6 +163,9 @@ function applySavedTheme() {
   );
 }
 
+/**
+ * 重設個人主題的草稿狀態
+ */
 function resetAppearanceDraftState() {
   appearancePreviewTheme = null;
   appearancePreviewAccentColor = null;
@@ -127,15 +176,24 @@ function resetAppearanceDraftState() {
   appearanceSelectionSource = 'classic';
 }
 
+/**
+ * 取消個人主題預覽
+ */
 function cancelAppearancePreview() {
   resetAppearanceDraftState();
   applySavedTheme();
 }
 
+/**
+ * 依顏色明暗決定按鈕文字顏色
+ */
 function getAppearanceButtonTextColor(color) {
   return isLightColor(color) ? '#111111' : '#ffffff';
 }
 
+/**
+ * 取得目前已套用的主題色
+ */
 function getCurrentAppliedAccentColor() {
   return normalizeThemeColor(
     settings.accentColor,
@@ -143,6 +201,19 @@ function getCurrentAppliedAccentColor() {
   );
 }
 
+/**
+ * 取得保存按鈕目前顯示的顏色
+ */
+function getCurrentSavedButtonColor() {
+  return normalizeThemeColor(
+    settings.accentColor,
+    DEFAULT_THEME.accentColor
+  );
+}
+
+/**
+ * 將顏色加入自訂顏色歷史
+ */
 function pushCustomColorToHistory(color) {
   const normalized = normalizeThemeColor(color, DEFAULT_THEME.accentColor);
 
@@ -152,6 +223,9 @@ function pushCustomColorToHistory(color) {
   ].slice(0, 5);
 }
 
+/**
+ * 將顏色加入保存顏色歷史
+ */
 function pushColorToSavedHistory(color) {
   const normalized = normalizeThemeColor(color, DEFAULT_THEME.accentColor);
 
@@ -161,30 +235,115 @@ function pushColorToSavedHistory(color) {
   ].slice(0, 6);
 }
 
+/**
+ * 取得目前被選中的自訂顏色格
+ */
 function getSelectedCustomSlotColor() {
   return appearanceCustomHistory[appearanceSelectedCustomSlotIndex] || null;
 }
 
-function getCurrentSavedButtonColor() {
-  return normalizeThemeColor(
-    settings.accentColor,
-    DEFAULT_THEME.accentColor
-  );
-}
-
+/**
+ * 將個人主題歷史同步回 settings
+ */
 function syncAppearanceHistoryToSettings() {
   settings.customColorHistory = [...appearanceCustomHistory];
   settings.savedColorHistory = [...appearanceSavedColorHistory];
 }
 
-// ===== 各區塊渲染 =====
+// ===== 背景工具 =====
+/**
+ * 套用設定頁背景樣式
+ * 這裡只負責把 CSS 變數寫進 root
+ */
+function applySettingsBackgroundStyle(imageUrl, opacityValue, blurValue) {
+  const root = document.documentElement;
+
+  root.style.setProperty(
+    '--page-background-image',
+    imageUrl ? `url("${imageUrl}")` : 'none'
+  );
+
+  root.style.setProperty(
+    '--page-background-opacity',
+    String(clampNumber(opacityValue, 0, 100, 16) / 100)
+  );
+
+  root.style.setProperty(
+    '--page-background-blur',
+    `${clampNumber(blurValue, 0, 40, 2)}px`
+  );
+}
+
+/**
+ * 依目前設定套用設定頁背景
+ */
+async function applySettingsPageBackground() {
+  const mode = normalizeBackgroundMode(settings.backgroundMode);
+
+  if (mode === 'none') {
+    applySettingsBackgroundStyle(
+      '',
+      settings.backgroundOpacity,
+      settings.backgroundBlur
+    );
+    return;
+  }
+
+  if (mode === 'importedImage') {
+    if (!settings.backgroundImagePath) {
+      applySettingsBackgroundStyle(
+        '',
+        settings.backgroundOpacity,
+        settings.backgroundBlur
+      );
+      return;
+    }
+
+    const imageDataUrl = await window.readerAPI.readImageData(
+      settings.backgroundImagePath
+    );
+
+    applySettingsBackgroundStyle(
+      imageDataUrl || '',
+      settings.backgroundOpacity,
+      settings.backgroundBlur
+    );
+    return;
+  }
+
+  if (mode === 'selectedBookCover') {
+    const lastSelectedBookPath = await window.readerAPI.getLastSelectedBook();
+
+    if (!lastSelectedBookPath) {
+      applySettingsBackgroundStyle(
+        '',
+        settings.backgroundOpacity,
+        settings.backgroundBlur
+      );
+      return;
+    }
+
+    const coverDataUrl = await window.readerAPI.readCoverData(
+      lastSelectedBookPath,
+      600
+    );
+
+    applySettingsBackgroundStyle(
+      coverDataUrl || '',
+      settings.backgroundOpacity,
+      settings.backgroundBlur
+    );
+  }
+}
+
+// ===== 各區塊渲染：書庫 =====
 /**
  * 渲染「書庫」區塊
  */
 function renderLibrarySection() {
   const currentSortMode = ['none', 'favorite', 'unread', 'completedLast'].includes(settings.bookSortMode)
-  ? settings.bookSortMode
-  : 'none';
+    ? settings.bookSortMode
+    : 'none';
 
   settingsContent.innerHTML = `
     <h1 class="settings-section-title">書庫</h1>
@@ -192,7 +351,7 @@ function renderLibrarySection() {
     <div class="settings-group">
       <div class="settings-label">書庫資料夾</div>
       <button id="pick-folder-btn">選取書庫資料夾</button>
-      <div class="settings-hint" id="display-library-name-hint">
+      <div class="settings-hint">
         從本機選擇欲瀏覽的資料夾並匯入
       </div>
     </div>
@@ -215,31 +374,39 @@ function renderLibrarySection() {
     <div class="settings-group">
       <div class="settings-label">書庫路徑</div>
       <div class="settings-value">${currentLibraryPath || '尚未選擇書庫資料夾'}</div>
-      <div class="settings-hint" id="display-library-name-hint">
+      <div class="settings-hint">
         未輸入書庫名稱時，於書庫左上角顯示路徑
       </div>
     </div>
 
-        <div class="settings-group">
+    <div class="settings-group">
       <div class="settings-label">書籍排序方式</div>
       <div class="settings-check-list" id="book-sort-options">
         <button class="settings-check-option" data-sort-mode="none" type="button">
-          <span class="settings-checkbox ${currentSortMode === 'none' ? 'checked' : ''}">${currentSortMode === 'none' ? '✓' : ''}</span>
+          <span class="settings-checkbox ${currentSortMode === 'none' ? 'checked' : ''}">
+            ${currentSortMode === 'none' ? '✓' : ''}
+          </span>
           <span>無優先排序的書籍</span>
         </button>
 
         <button class="settings-check-option" data-sort-mode="favorite" type="button">
-          <span class="settings-checkbox ${currentSortMode === 'favorite' ? 'checked' : ''}">${currentSortMode === 'favorite' ? '✓' : ''}</span>
+          <span class="settings-checkbox ${currentSortMode === 'favorite' ? 'checked' : ''}">
+            ${currentSortMode === 'favorite' ? '✓' : ''}
+          </span>
           <span>" 我的最愛 " 書籍優先</span>
         </button>
 
         <button class="settings-check-option" data-sort-mode="unread" type="button">
-          <span class="settings-checkbox ${currentSortMode === 'unread' ? 'checked' : ''}">${currentSortMode === 'unread' ? '✓' : ''}</span>
+          <span class="settings-checkbox ${currentSortMode === 'unread' ? 'checked' : ''}">
+            ${currentSortMode === 'unread' ? '✓' : ''}
+          </span>
           <span>未閱讀的書籍優先</span>
         </button>
 
         <button class="settings-check-option" data-sort-mode="completedLast" type="button">
-          <span class="settings-checkbox ${currentSortMode === 'completedLast' ? 'checked' : ''}">${currentSortMode === 'completedLast' ? '✓' : ''}</span>
+          <span class="settings-checkbox ${currentSortMode === 'completedLast' ? 'checked' : ''}">
+            ${currentSortMode === 'completedLast' ? '✓' : ''}
+          </span>
           <span>已看完的書籍墊後</span>
         </button>
       </div>
@@ -272,21 +439,20 @@ function renderLibrarySection() {
     settings = await window.readerAPI.saveAppSettings(settings);
     renderSection();
   });
-  
+
   document.getElementById('book-sort-options')?.addEventListener('click', async (event) => {
     const option = event.target.closest('[data-sort-mode]');
     if (!option) return;
 
-    const selectedMode = option.dataset.sortMode || 'none';
-
-    settings.bookSortMode = selectedMode;
+    settings.bookSortMode = option.dataset.sortMode || 'none';
     settings = await window.readerAPI.saveAppSettings(settings);
     renderSection();
   });
 }
 
+// ===== 各區塊渲染：個人化 =====
 /**
- * 渲染「個人化介面」區塊
+ * 渲染「個人化」區塊
  */
 function renderAppearanceSection() {
   const effectiveTheme = getEffectiveAppearanceTheme();
@@ -295,8 +461,15 @@ function renderAppearanceSection() {
   const savedButtonColor = getCurrentSavedButtonColor();
   const previewAccentColor = appearancePendingAccentColor || effectiveAccentColor;
 
-  const customSlots = Array.from({ length: 5 }, (_, index) => appearanceCustomHistory[index] || null);
-  const savedSlots = Array.from({ length: 6 }, (_, index) => appearanceSavedColorHistory[index] || null);
+  const customSlots = Array.from(
+    { length: 5 },
+    (_, index) => appearanceCustomHistory[index] || null
+  );
+
+  const savedSlots = Array.from(
+    { length: 6 },
+    (_, index) => appearanceSavedColorHistory[index] || null
+  );
 
   const PALETTE_ICON = `
     <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" aria-hidden="true">
@@ -327,9 +500,8 @@ function renderAppearanceSection() {
           <span>深色調</span>
         </button>
       </div>
-      <div class="settings-hint">
-        選擇系統的主題色調
-        </div>
+
+      <div class="settings-hint">選擇系統的主題色調</div>
     </div>
 
     <div class="settings-group">
@@ -340,22 +512,22 @@ function renderAppearanceSection() {
           ${PRESET_THEME_COLORS.map((color) => {
             const normalizedColor = normalizeThemeColor(color, DEFAULT_THEME.accentColor);
             const isSelected =
-            appearanceSelectionSource === 'classic' &&
-            normalizedColor === effectiveAccentColor;
-            
+              appearanceSelectionSource === 'classic' &&
+              normalizedColor === effectiveAccentColor;
+
             return `
-            <button
-            class="appearance-color-option ${isSelected ? 'selected' : ''}"
-            type="button"
-            data-accent-color="${color}"
-            style="background:${color}; color:${getAppearanceButtonTextColor(color)};"
-            title="${color}">
-            </button>
+              <button
+                class="appearance-color-option ${isSelected ? 'selected' : ''}"
+                type="button"
+                data-accent-color="${color}"
+                style="background:${color}; color:${getAppearanceButtonTextColor(color)};"
+                title="${color}">
+              </button>
             `;
           }).join('')}
         </div>
-        
       </div>
+
       <div class="appearance-row">
         <div class="appearance-row-label">自訂顏色</div>
         <div class="appearance-row-controls appearance-row-controls-fixed">
@@ -374,11 +546,11 @@ function renderAppearanceSection() {
           `).join('')}
 
           <button
-          id="appearance-save-btn"
-          class="appearance-save-btn"
-          type="button"
-          style="background:${savedButtonColor}; color:${getAppearanceButtonTextColor(savedButtonColor)};">
-          保存
+            id="appearance-save-btn"
+            class="appearance-save-btn"
+            type="button"
+            style="background:${savedButtonColor}; color:${getAppearanceButtonTextColor(savedButtonColor)};">
+            保存
           </button>
 
           <input
@@ -395,11 +567,11 @@ function renderAppearanceSection() {
         <div class="appearance-row-controls appearance-row-controls-fixed">
           ${savedSlots.map((color, index) => `
             <button
-            class="appearance-saved-history-btn ${color ? 'has-color' : ''} ${appearanceSelectionSource === 'saved' && index === appearanceSelectedSavedSlotIndex ? 'selected' : ''}"
-            type="button"
-            data-saved-history-index="${index}"
-            ${color ? `style="background:${color}; color:${getAppearanceButtonTextColor(color)}; border-color:${color};"` : ''}
-            title="${color || '尚未保存顏色'}">
+              class="appearance-saved-history-btn ${color ? 'has-color' : ''} ${appearanceSelectionSource === 'saved' && index === appearanceSelectedSavedSlotIndex ? 'selected' : ''}"
+              type="button"
+              data-saved-history-index="${index}"
+              ${color ? `style="background:${color}; color:${getAppearanceButtonTextColor(color)}; border-color:${color};"` : ''}
+              title="${color || '尚未保存顏色'}">
             </button>
           `).join('')}
 
@@ -417,8 +589,77 @@ function renderAppearanceSection() {
         選擇個人主題顏色，可以自訂與保存顏色，須按下「套用」才會生效
       </div>
     </div>
+
+    <div class="settings-group">
+      <div class="settings-label">背景</div>
+
+      <div class="settings-check-list" id="background-mode-options">
+        <button class="settings-check-option" data-background-mode="none" type="button">
+          <span class="settings-checkbox ${settings.backgroundMode === 'none' ? 'checked' : ''}">
+            ${settings.backgroundMode === 'none' ? '✓' : ''}
+          </span>
+          <span>不顯示</span>
+        </button>
+
+        <button class="settings-check-option" data-background-mode="selectedBookCover" type="button">
+          <span class="settings-checkbox ${settings.backgroundMode === 'selectedBookCover' ? 'checked' : ''}">
+            ${settings.backgroundMode === 'selectedBookCover' ? '✓' : ''}
+          </span>
+          <span>顯示點選的書籍封面</span>
+        </button>
+
+        <button class="settings-check-option" data-background-mode="importedImage" type="button">
+          <span class="settings-checkbox ${settings.backgroundMode === 'importedImage' ? 'checked' : ''}">
+            ${settings.backgroundMode === 'importedImage' ? '✓' : ''}
+          </span>
+          <span>顯示匯入的圖片</span>
+        </button>
+      </div>
+
+      <div class="settings-inline">
+        <button id="pick-background-image-btn" type="button">選取背景圖片</button>
+        <span class="settings-hint">
+          ${settings.backgroundImagePath ? settings.backgroundImagePath : '尚未選取背景圖片'}
+        </span>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-label">背景風格</div>
+
+      <div class="settings-group">
+        <div class="settings-label">透明度</div>
+        <input
+          id="background-opacity-range"
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          value="${clampNumber(settings.backgroundOpacity, 0, 100, 16)}"
+        >
+      </div>
+
+      <div class="settings-group">
+        <div class="settings-label">模糊度</div>
+        <input
+          id="background-blur-range"
+          type="range"
+          min="0"
+          max="40"
+          step="1"
+          value="${clampNumber(settings.backgroundBlur, 0, 40, 2)}"
+        >
+      </div>
+    </div>
   `;
 
+  bindAppearanceSectionEvents();
+}
+
+/**
+ * 綁定「個人化」區塊事件
+ */
+function bindAppearanceSectionEvents() {
   const lightBtn = document.getElementById('appearance-theme-light-btn');
   const darkBtn = document.getElementById('appearance-theme-dark-btn');
   const colorButtons = settingsContent.querySelectorAll('[data-accent-color]');
@@ -446,30 +687,44 @@ function renderAppearanceSection() {
 
   colorButtons.forEach((button) => {
     button.addEventListener('click', () => {
-      const color = normalizeThemeColor(button.dataset.accentColor, DEFAULT_THEME.accentColor);
+      const color = normalizeThemeColor(
+        button.dataset.accentColor,
+        DEFAULT_THEME.accentColor
+      );
+
       appearanceSelectionSource = 'classic';
       appearanceSelectedCustomSlotIndex = -1;
       appearanceSelectedSavedSlotIndex = -1;
       appearancePreviewAccentColor = color;
       appearancePendingAccentColor = color;
+
       applyThemePreview(getEffectiveAppearanceTheme(), color);
       renderAppearanceSection();
     });
   });
 
   colorPicker?.addEventListener('input', (event) => {
-    const color = normalizeThemeColor(event.target.value, DEFAULT_THEME.accentColor);
+    const color = normalizeThemeColor(
+      event.target.value,
+      DEFAULT_THEME.accentColor
+    );
+
     appearancePreviewAccentColor = color;
     appearancePendingAccentColor = color;
     applyThemePreview(getEffectiveAppearanceTheme(), color);
   });
 
   colorPicker?.addEventListener('change', async (event) => {
-    const color = normalizeThemeColor(event.target.value, DEFAULT_THEME.accentColor);
+    const color = normalizeThemeColor(
+      event.target.value,
+      DEFAULT_THEME.accentColor
+    );
+
     appearanceDraftCustomColor = color;
     appearancePreviewAccentColor = color;
     appearancePendingAccentColor = color;
     pushCustomColorToHistory(color);
+
     appearanceSelectionSource = 'classic';
     appearanceSelectedCustomSlotIndex = -1;
     appearanceSelectedSavedSlotIndex = -1;
@@ -493,6 +748,7 @@ function renderAppearanceSection() {
       appearanceDraftCustomColor = color;
       appearancePreviewAccentColor = color;
       appearancePendingAccentColor = color;
+
       applyThemePreview(getEffectiveAppearanceTheme(), color);
       renderAppearanceSection();
     });
@@ -522,6 +778,7 @@ function renderAppearanceSection() {
       appearanceSelectedCustomSlotIndex = -1;
       appearancePreviewAccentColor = color;
       appearancePendingAccentColor = color;
+
       applyThemePreview(getEffectiveAppearanceTheme(), color);
       renderAppearanceSection();
     });
@@ -529,7 +786,7 @@ function renderAppearanceSection() {
 
   applyBtn?.addEventListener('click', async () => {
     const nextAccentColor = normalizeThemeColor(
-      appearancePendingAccentColor || effectiveAccentColor,
+      appearancePendingAccentColor || getEffectiveAccentColor(),
       DEFAULT_THEME.accentColor
     );
 
@@ -541,8 +798,55 @@ function renderAppearanceSection() {
     applySavedTheme();
     renderAppearanceSection();
   });
+
+  document.getElementById('background-mode-options')?.addEventListener('click', async (event) => {
+    const option = event.target.closest('[data-background-mode]');
+    if (!option) return;
+
+    settings.backgroundMode = normalizeBackgroundMode(option.dataset.backgroundMode);
+    settings = await window.readerAPI.saveAppSettings(settings);
+
+    await applySettingsPageBackground();
+    renderAppearanceSection();
+  });
+
+  document.getElementById('pick-background-image-btn')?.addEventListener('click', async () => {
+    const imagePath = await window.readerAPI.pickBackgroundImage();
+    if (!imagePath) return;
+
+    settings.backgroundImagePath = imagePath;
+    settings.backgroundMode = 'importedImage';
+    settings = await window.readerAPI.saveAppSettings(settings);
+
+    await applySettingsPageBackground();
+    renderAppearanceSection();
+  });
+
+  document.getElementById('background-opacity-range')?.addEventListener('input', async (event) => {
+    settings.backgroundOpacity = clampNumber(event.target.value, 0, 100, 16);
+    await applySettingsPageBackground();
+  });
+
+  document.getElementById('background-opacity-range')?.addEventListener('change', async (event) => {
+    settings.backgroundOpacity = clampNumber(event.target.value, 0, 100, 16);
+    settings = await window.readerAPI.saveAppSettings(settings);
+  });
+
+  document.getElementById('background-blur-range')?.addEventListener('input', async (event) => {
+    settings.backgroundBlur = clampNumber(event.target.value, 0, 40, 2);
+    await applySettingsPageBackground();
+  });
+
+  document.getElementById('background-blur-range')?.addEventListener('change', async (event) => {
+    settings.backgroundBlur = clampNumber(event.target.value, 0, 40, 2);
+    settings = await window.readerAPI.saveAppSettings(settings);
+  });
 }
 
+// ===== 各區塊渲染：紀錄 =====
+/**
+ * 渲染「紀錄」區塊
+ */
 function renderHistorySection() {
   const currentVisibility = settings.readingHistoryVisibility === 'shown'
     ? 'shown'
@@ -556,12 +860,16 @@ function renderHistorySection() {
 
       <div class="settings-check-list" id="reading-history-visibility-options">
         <button class="settings-check-option" data-history-visibility="hidden" type="button">
-          <span class="settings-checkbox ${currentVisibility === 'hidden' ? 'checked' : ''}">${currentVisibility === 'hidden' ? '✓' : ''}</span>
+          <span class="settings-checkbox ${currentVisibility === 'hidden' ? 'checked' : ''}">
+            ${currentVisibility === 'hidden' ? '✓' : ''}
+          </span>
           <span>不顯示</span>
         </button>
 
         <button class="settings-check-option" data-history-visibility="shown" type="button">
-          <span class="settings-checkbox ${currentVisibility === 'shown' ? 'checked' : ''}">${currentVisibility === 'shown' ? '✓' : ''}</span>
+          <span class="settings-checkbox ${currentVisibility === 'shown' ? 'checked' : ''}">
+            ${currentVisibility === 'shown' ? '✓' : ''}
+          </span>
           <span>顯示</span>
         </button>
       </div>
@@ -572,16 +880,19 @@ function renderHistorySection() {
     const option = event.target.closest('[data-history-visibility]');
     if (!option) return;
 
-    const nextValue = option.dataset.historyVisibility === 'shown' ? 'shown' : 'hidden';
-    settings.readingHistoryVisibility = nextValue;
+    settings.readingHistoryVisibility =
+      option.dataset.historyVisibility === 'shown'
+        ? 'shown'
+        : 'hidden';
 
     settings = await window.readerAPI.saveAppSettings(settings);
     renderSection();
   });
 }
 
+// ===== 各區塊渲染：閱讀功能 =====
 /**
- * 渲染「循環播放」區塊
+ * 渲染「閱讀功能細項」區塊
  */
 function renderAutoplaySection() {
   settingsContent.innerHTML = `
@@ -612,19 +923,24 @@ function renderAutoplaySection() {
   });
 }
 
+// ===== 各區塊渲染：全螢幕 =====
 /**
  * 渲染「全螢幕」區塊
  */
 function renderFullscreenSection() {
   settingsContent.innerHTML = `
     <h1 class="settings-section-title">全螢幕</h1>
-    <p class="settings-hint">書庫頁與設定頁右上角的全螢幕按鈕功能一致。進入全螢幕後，按鍵盤 Esc 可以離開全螢幕。</p>
-    <div class="settings-empty">目前這個項目先提供操作說明，之後可再加入更多全螢幕細項。</div>
+    <p class="settings-hint">
+      書庫頁與設定頁右上角的全螢幕按鈕功能一致。進入全螢幕後，按鍵盤 Esc 可以離開全螢幕。
+    </p>
+    <div class="settings-empty">
+      目前這個項目先提供操作說明，之後可再加入更多全螢幕細項。
+    </div>
   `;
 }
 
 /**
- * 依目前選中的項目渲染右側內容
+ * 依目前選單渲染右側內容
  */
 function renderSection() {
   renderMenuState();
@@ -652,7 +968,7 @@ function renderSection() {
   renderFullscreenSection();
 }
 
-// ===== 初始化 =====
+// ===== 初始化資料 =====
 /**
  * 載入設定頁初始狀態
  */
@@ -663,36 +979,46 @@ async function loadInitialState() {
   ]);
 
   currentLibraryPath = folderPath || '';
+
   settings = {
     displayLibraryName: appSettings?.displayLibraryName || '',
     autoPlaySeconds: Math.max(1, Number(appSettings?.autoPlaySeconds) || 5),
     bookSortMode: ['none', 'favorite', 'unread', 'completedLast'].includes(appSettings?.bookSortMode)
-    ? appSettings.bookSortMode
-    : 'none',
+      ? appSettings.bookSortMode
+      : 'none',
     readingHistoryVisibility: appSettings?.readingHistoryVisibility === 'shown'
-    ? 'shown'
-    : 'hidden',
+      ? 'shown'
+      : 'hidden',
     appearanceTheme: appSettings?.appearanceTheme === 'light'
-    ? 'light'
-    : DEFAULT_THEME.appearanceTheme,
+      ? 'light'
+      : DEFAULT_THEME.appearanceTheme,
     accentColor: normalizeThemeColor(
       appSettings?.accentColor,
       DEFAULT_THEME.accentColor
     ),
     customColorHistory: Array.isArray(appSettings?.customColorHistory)
-    ? appSettings.customColorHistory.map((color) => normalizeThemeColor(color, DEFAULT_THEME.accentColor)).slice(0, 5)
-    : [],
-  savedColorHistory: Array.isArray(appSettings?.savedColorHistory)
-    ? appSettings.savedColorHistory.map((color) => normalizeThemeColor(color, DEFAULT_THEME.accentColor)).slice(0, 6)
-    : [],
+      ? appSettings.customColorHistory
+          .map((color) => normalizeThemeColor(color, DEFAULT_THEME.accentColor))
+          .slice(0, 5)
+      : [],
+    savedColorHistory: Array.isArray(appSettings?.savedColorHistory)
+      ? appSettings.savedColorHistory
+          .map((color) => normalizeThemeColor(color, DEFAULT_THEME.accentColor))
+          .slice(0, 6)
+      : [],
+    backgroundMode: normalizeBackgroundMode(appSettings?.backgroundMode),
+    backgroundImagePath: appSettings?.backgroundImagePath || '',
+    backgroundOpacity: clampNumber(appSettings?.backgroundOpacity, 0, 100, 16),
+    backgroundBlur: clampNumber(appSettings?.backgroundBlur, 0, 40, 2),
   };
+
   appearanceCustomHistory = [...settings.customColorHistory];
   appearanceSavedColorHistory = [...settings.savedColorHistory];
 }
 
 // ===== 全螢幕工具 =====
 /**
- * 按下 Esc 時離開全螢幕
+ * 按 Esc 時離開全螢幕
  */
 async function leaveFullscreenIfNeeded(event) {
   if (event.key !== 'Escape' || !isFullscreen) return;
@@ -703,7 +1029,7 @@ async function leaveFullscreenIfNeeded(event) {
 }
 
 /**
- * 更新全螢幕按鈕顯示
+ * 更新右上角全螢幕按鈕狀態
  */
 function updateFullscreenButton() {
   if (!fullscreenBtn) return;
@@ -727,7 +1053,7 @@ function updateFullscreenButton() {
   }
 }
 
-// ===== 事件 =====
+// ===== 頁面事件 =====
 backBtn?.addEventListener('click', async () => {
   if (activeSection === 'appearance') {
     cancelAppearancePreview();
@@ -758,10 +1084,15 @@ settingsMenu?.addEventListener('click', (event) => {
 window.addEventListener('keydown', leaveFullscreenIfNeeded);
 
 // ===== 啟動設定頁 =====
+/**
+ * 初始化設定頁
+ */
 async function initSettingsPage() {
   await loadInitialState();
   resetAppearanceDraftState();
   applySavedTheme();
+  await applySettingsPageBackground();
+
   activeSection = 'library';
   updateFullscreenButton();
   renderSection();

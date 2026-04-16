@@ -119,10 +119,32 @@ button:hover {
   flex: 1;
   display: grid;
   grid-template-columns: 1fr 350px;
-  height: calc(100vh - 50px); 
+  height: calc(100vh - 50px);
   overflow: hidden;
+  position: relative;
+  isolation: isolate;
 }
 
+.layout::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--page-background-image, none);
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: 100% auto;
+  opacity: var(--page-background-opacity, 0);
+  filter: blur(var(--page-background-blur, 0px));
+  transform: scale(1.04);
+  transform-origin: center center;
+}
+
+.layout > * {
+  position: relative;
+  z-index: 1;
+}
 .library-section {
   padding: 30px;
   overflow-y: auto;

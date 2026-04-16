@@ -143,6 +143,31 @@ button:hover {
 
 .settings-layout {
   grid-template-columns: 350px 1fr;
+  position: relative;
+  isolation: isolate;
+}
+
+.settings-layout::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+
+  background-image: var(--page-background-image, none);
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: 100% auto;
+
+  opacity: var(--page-background-opacity, 0);
+  filter: blur(var(--page-background-blur, 0px));
+  transform: scale(1.04);
+  transform-origin: center center;
+}
+
+.settings-layout > * {
+  position: relative;
+  z-index: 1;
 }
 
 .library-section {
@@ -555,4 +580,42 @@ button:hover {
   width: 90px;
   font-size: 16px;
   color: var(--theme-button-text);
+}
+
+input[type="range"] {
+  width: min(100%, 520px);
+  height: 24px;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: #46b8ff;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+}
+
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #46b8ff;
+  border: 2px solid rgba(255, 255, 255, 0.75);
 }
