@@ -51,6 +51,7 @@ let currentLibraryPath = '';
 let books = [];
 let selectedBookId = null;
 let isFullscreen = false;
+let visibleCoverLoadTimer = null;
 
 let appSettings = {
   displayLibraryName: '',
@@ -883,7 +884,7 @@ async function setBookFavorite(bookId, isFavorite) {
     book.tags = tags || {};
     updateBookCardFavoriteState(book.id);
     updateRecentReadingFavoriteState(book.id);
-    await rerenderBookGridIfSortAffected('favorite');
+    await rerenderBookGridIfSortAffected();
   } catch (error) {
     console.error('更新我的最愛狀態失敗:', error);
   }
@@ -942,17 +943,29 @@ async function renderBookGrid() {
       openReader(bookId);
     });
   });
+  
+  renderDetailPanel();
+  await renderRecentReadingSection();
 
-  sortedBooks.slice(0, 10).forEach((book) => {
-    const img = document.querySelector(`[data-cover-book-id="${book.id}"]`);
-    if (!img) return;
+  // 先優先載入 selected book 封面
+  const selectedBook = getBookById(selectedBookId);
+  if (selectedBook) {
+    const selectedImg = document.querySelector(
+      `[data-cover-book-id="${selectedBook.id}"]`
+    );
+  
+    if (selectedImg) {
+      loadCover(selectedBook, selectedImg, 400);
+    }
+  }
 
-    loadCover(book, img, 400);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      loadVisibleCovers(400);
+    });
   });
 
-  renderDetailPanel();
   lazyLoadRemainingCovers();
-  await renderRecentReadingSection();
 }
 
 async function rerenderBookGridIfSortAffected() {
@@ -969,11 +982,78 @@ async function rerenderBookGridIfSortAffected() {
 }
 
 /**
+ * 取得目前 library-section 視窗內可見的書卡
+ * 可加一點 buffer，讓即將出現的下一排也先載入
+ */
+function getVisibleBookCards(buffer = 200) {
+  if (!librarySection) return [];
+
+  const containerTop = librarySection.scrollTop;
+  const containerBottom = containerTop + librarySection.clientHeight;
+
+  const cards = Array.from(document.querySelectorAll('.book-card'));
+
+  return cards.filter((card) => {
+    const cardTop = card.offsetTop;
+    const cardBottom = cardTop + card.offsetHeight;
+
+    return (
+      cardBottom >= containerTop - buffer &&
+      cardTop <= containerBottom + buffer
+    );
+  });
+}
+
+/**
+ * 優先載入目前視窗可見範圍內的所有書籍封面
+ */
+function loadVisibleCovers(width = 400) {
+  const visibleCards = getVisibleBookCards(200);
+
+  visibleCards.forEach((card) => {
+    const bookId = card.dataset.bookId;
+    const book = getBookById(bookId);
+    if (!book) return;
+
+    const img = card.querySelector('.book-cover-img');
+    if (!img) return;
+
+    loadCover(book, img, width);
+  });
+}
+
+/**
+ * 將目前選中的書卡捲到 library-section 上方
+ * 讓該書所在列成為第一排，並與上邊界保留 30px
+ */
+function scrollSelectedBookToTop() {
+  if (!librarySection) return;
+  if (!selectedBookId) return;
+
+  const selectedCard = document.querySelector(
+    `.book-card[data-book-id="${selectedBookId}"]`
+  );
+
+  if (!selectedCard) return;
+
+  const targetTop = Math.max(0, selectedCard.offsetTop - 30);
+  librarySection.scrollTop = targetTop;
+}
+
+function scrollSelectedBookToTopAfterLayout() {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      scrollSelectedBookToTop();
+    });
+  });
+}
+
+/**
  * 延後載入剩餘封面
  */
 function lazyLoadRemainingCovers() {
   const sortedBooks = getSortedBooks();
-  let index = 6;
+  let index = 0;
 
   function processNext() {
     if (index >= sortedBooks.length) return;
@@ -986,7 +1066,7 @@ function lazyLoadRemainingCovers() {
     }
 
     index += 1;
-    setTimeout(processNext, 200);
+    setTimeout(processNext, 120);
   }
 
   processNext();
@@ -1013,7 +1093,7 @@ function renderLibraryTitle() {
 /**
  * 重新掃描書庫並刷新畫面
  */
-async function refreshLibrary() {
+async function refreshLibrary({ scrollToSelected = false } = {}) {
   if (!currentLibraryPath) return;
 
   books = await window.readerAPI.scanLibrary(currentLibraryPath);
@@ -1033,6 +1113,17 @@ async function refreshLibrary() {
 
   await renderBookGrid();
   await applyPageBackground();
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (scrollToSelected) {
+        scrollSelectedBookToTop();
+      }
+
+      loadVisibleCovers(400);
+      lazyLoadRemainingCovers();
+    });
+  });
 }
 
 /**
@@ -1087,7 +1178,7 @@ async function restoreLastLibrary() {
 
   currentLibraryPath = folderPath;
   renderLibraryTitle();
-  await refreshLibrary();
+  await refreshLibrary({ scrollToSelected: true });
 }
 
 // ===== 全螢幕工具 =====
@@ -1198,6 +1289,16 @@ window.readerAPI?.onReadingProgressUpdated?.(async ({ filePath, record }) => {
   }
 
   await rerenderBookGridIfSortAffected();
+});
+
+librarySection?.addEventListener('scroll', () => {
+  if (visibleCoverLoadTimer) {
+    clearTimeout(visibleCoverLoadTimer);
+  }
+
+  visibleCoverLoadTimer = setTimeout(() => {
+    loadVisibleCovers(400);
+  }, 60);
 });
 
 // ===== 初始化 =====

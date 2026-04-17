@@ -419,7 +419,18 @@ function renderLibrarySection() {
     if (!folderPath) return;
 
     currentLibraryPath = folderPath;
-    await window.readerAPI.scanLibrary(folderPath);
+
+    const scannedBooks = await window.readerAPI.scanLibrary(folderPath);
+    const firstBook = Array.isArray(scannedBooks) && scannedBooks.length > 0
+    ? scannedBooks[0]
+    : null;
+
+    await window.readerAPI.saveLastSelectedBook(firstBook?.filePath || '');
+
+    if (settings.backgroundMode === 'selectedBookCover') {
+      await applySettingsPageBackground();
+    }
+
     renderSection();
   });
 
