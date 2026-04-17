@@ -2,6 +2,9 @@
   box-sizing: border-box;
 }
 
+/* =========================================================
+   Theme Variables
+   ========================================================= */
 :root {
   --myreader-scrollbar-size: 12px;
   --myreader-scrollbar-radius: 999px;
@@ -25,6 +28,9 @@
   --theme-button-text: #ffffff;
 }
 
+/* =========================================================
+   Base
+   ========================================================= */
 html,
 body {
   margin: 0;
@@ -43,6 +49,22 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+button {
+  height: 40px;
+  border-radius: 10px;
+  cursor: pointer;
+  background: var(--theme-accent);
+  color: var(--theme-button-text);
+  transition: 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+button:hover {
+  opacity: 0.9;
 }
 
 /* =========================================================
@@ -64,22 +86,6 @@ body {
   align-items: center;
   gap: 12px;
   min-width: 0;
-}
-
-button {
-  height: 40px;
-  border-radius: 10px;
-  cursor: pointer;
-  background: var(--theme-accent);
-  color: var(--theme-button-text);
-  transition: 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-button:hover {
-  opacity: 0.9;
 }
 
 .toolbar-btn,
@@ -153,12 +159,10 @@ button:hover {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-
   background-image: var(--page-background-image, none);
   background-repeat: no-repeat;
   background-position: center center;
   background-size: 100% auto;
-
   opacity: var(--page-background-opacity, 0);
   filter: blur(var(--page-background-blur, 0px));
   transform: scale(1.04);
@@ -195,7 +199,7 @@ button:hover {
 .settings-menu {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 15px;
 }
 
 .settings-item {
@@ -273,7 +277,19 @@ button:hover {
   padding-top: 6px;
 }
 
+.settings-inline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-unit {
+  color: var(--theme-muted-text);
+  font-size: 14px;
+}
+
 #pick-folder-btn,
+#pick-background-image-btn,
 .settings-value,
 .settings-input {
   width: min(100%, 490px);
@@ -311,19 +327,8 @@ button:hover {
   padding-right: 8px;
 }
 
-.settings-inline {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.settings-unit {
-  color: var(--theme-muted-text);
-  font-size: 14px;
-}
-
 /* =========================================================
-   Checkbox-style options
+   Checkbox-style Options
    ========================================================= */
 .settings-check-list {
   display: flex;
@@ -367,65 +372,6 @@ button:hover {
   border-color: var(--theme-accent);
   background: var(--theme-accent);
   color: var(--theme-button-text);
-}
-
-/* =========================================================
-   Scrollbar
-   ========================================================= */
-.library-section,
-.detail-panel,
-.settings-content,
-.settings-menu-panel {
-  scrollbar-width: thin;
-  scrollbar-color: var(--myreader-scrollbar-thumb) var(--myreader-scrollbar-track);
-}
-
-.library-section::-webkit-scrollbar,
-.detail-panel::-webkit-scrollbar,
-.settings-content::-webkit-scrollbar,
-.settings-menu-panel::-webkit-scrollbar {
-  width: var(--myreader-scrollbar-size);
-  height: var(--myreader-scrollbar-size);
-}
-
-.library-section::-webkit-scrollbar-track,
-.detail-panel::-webkit-scrollbar-track,
-.settings-content::-webkit-scrollbar-track,
-.settings-menu-panel::-webkit-scrollbar-track {
-  background: var(--myreader-scrollbar-track);
-  border-radius: var(--myreader-scrollbar-radius);
-}
-
-.library-section::-webkit-scrollbar-thumb,
-.detail-panel::-webkit-scrollbar-thumb,
-.settings-content::-webkit-scrollbar-thumb,
-.settings-menu-panel::-webkit-scrollbar-thumb {
-  background: var(--myreader-scrollbar-thumb);
-  border-radius: var(--myreader-scrollbar-radius);
-  border: 1px solid var(--myreader-scrollbar-border);
-}
-
-.library-section:hover::-webkit-scrollbar-track,
-.detail-panel:hover::-webkit-scrollbar-track,
-.settings-content:hover::-webkit-scrollbar-track,
-.settings-menu-panel:hover::-webkit-scrollbar-track {
-  background: var(--myreader-scrollbar-track-hover);
-}
-
-.library-section:hover::-webkit-scrollbar-thumb,
-.detail-panel:hover::-webkit-scrollbar-thumb,
-.settings-content:hover::-webkit-scrollbar-thumb,
-.settings-menu-panel:hover::-webkit-scrollbar-thumb {
-  background: var(--myreader-scrollbar-thumb-hover);
-}
-
-.library-section::-webkit-scrollbar-button,
-.detail-panel::-webkit-scrollbar-button,
-.settings-content::-webkit-scrollbar-button,
-.settings-menu-panel::-webkit-scrollbar-button {
-  display: none;
-  width: 0;
-  height: 0;
 }
 
 /* =========================================================
@@ -582,9 +528,45 @@ button:hover {
   color: var(--theme-button-text);
 }
 
+/* =========================================================
+   Background Section
+   ========================================================= */
+.background-image-picker-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.background-image-path {
+  word-break: break-all;
+}
+
+.background-slider-row {
+  width: 500px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.background-slider-label {
+  width: 76px;
+  min-width: 76px;
+  color: var(--theme-text);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.background-range {
+  flex: 1;
+  min-width: 300px;
+}
+
+/* =========================================================
+   Range Slider
+   ========================================================= */
 input[type="range"] {
-  width: min(100%, 520px);
-  height: 24px;
+  width: min(100%, 30px);
+  height: 20px;
   appearance: none;
   background: transparent;
   cursor: pointer;
@@ -602,8 +584,8 @@ input[type="range"]::-webkit-slider-thumb {
   height: 18px;
   margin-top: -6px;
   border-radius: 50%;
-  background: #46b8ff;
-  border: 2px solid rgba(255, 255, 255, 0.75);
+  background: var(--theme-accent);
+  border: solid var(--theme-text);
 }
 
 input[type="range"]::-moz-range-track {
@@ -616,6 +598,71 @@ input[type="range"]::-moz-range-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #46b8ff;
-  border: 2px solid rgba(255, 255, 255, 0.75);
+  background: var(--theme-accent);
+  border: solid var(--theme-text);
+}
+
+input[type="range"],
+input[type="range"]::-webkit-slider-thumb,
+input[type="range"]::-moz-range-thumb {
+  cursor: pointer;
+}
+
+/* =========================================================
+   Scrollbar
+   ========================================================= */
+.library-section,
+.detail-panel,
+.settings-content,
+.settings-menu-panel {
+  scrollbar-width: thin;
+  scrollbar-color: var(--myreader-scrollbar-thumb) var(--myreader-scrollbar-track);
+}
+
+.library-section::-webkit-scrollbar,
+.detail-panel::-webkit-scrollbar,
+.settings-content::-webkit-scrollbar,
+.settings-menu-panel::-webkit-scrollbar {
+  width: var(--myreader-scrollbar-size);
+  height: var(--myreader-scrollbar-size);
+}
+
+.library-section::-webkit-scrollbar-track,
+.detail-panel::-webkit-scrollbar-track,
+.settings-content::-webkit-scrollbar-track,
+.settings-menu-panel::-webkit-scrollbar-track {
+  background: var(--myreader-scrollbar-track);
+  border-radius: var(--myreader-scrollbar-radius);
+}
+
+.library-section::-webkit-scrollbar-thumb,
+.detail-panel::-webkit-scrollbar-thumb,
+.settings-content::-webkit-scrollbar-thumb,
+.settings-menu-panel::-webkit-scrollbar-thumb {
+  background: var(--myreader-scrollbar-thumb);
+  border-radius: var(--myreader-scrollbar-radius);
+  border: 1px solid var(--myreader-scrollbar-border);
+}
+
+.library-section:hover::-webkit-scrollbar-track,
+.detail-panel:hover::-webkit-scrollbar-track,
+.settings-content:hover::-webkit-scrollbar-track,
+.settings-menu-panel:hover::-webkit-scrollbar-track {
+  background: var(--myreader-scrollbar-track-hover);
+}
+
+.library-section:hover::-webkit-scrollbar-thumb,
+.detail-panel:hover::-webkit-scrollbar-thumb,
+.settings-content:hover::-webkit-scrollbar-thumb,
+.settings-menu-panel:hover::-webkit-scrollbar-thumb {
+  background: var(--myreader-scrollbar-thumb-hover);
+}
+
+.library-section::-webkit-scrollbar-button,
+.detail-panel::-webkit-scrollbar-button,
+.settings-content::-webkit-scrollbar-button,
+.settings-menu-panel::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }

@@ -325,7 +325,7 @@ async function applySettingsPageBackground() {
 
     const coverDataUrl = await window.readerAPI.readCoverData(
       lastSelectedBookPath,
-      600
+      750
     );
 
     applySettingsBackgroundStyle(
@@ -602,66 +602,66 @@ function renderAppearanceSection() {
     </div>
 
     <div class="settings-group">
-      <div class="settings-label">背景</div>
+  <div class="settings-label">背景</div>
 
-      <div class="settings-check-list" id="background-mode-options">
-        <button class="settings-check-option" data-background-mode="none" type="button">
-          <span class="settings-checkbox ${settings.backgroundMode === 'none' ? 'checked' : ''}">
-            ${settings.backgroundMode === 'none' ? '✓' : ''}
-          </span>
-          <span>不顯示</span>
-        </button>
+  <div class="settings-check-list" id="background-mode-options">
+    <button class="settings-check-option" data-background-mode="none" type="button">
+      <span class="settings-checkbox ${settings.backgroundMode === 'none' ? 'checked' : ''}">
+        ${settings.backgroundMode === 'none' ? '✓' : ''}
+      </span>
+      <span>不顯示</span>
+    </button>
 
-        <button class="settings-check-option" data-background-mode="selectedBookCover" type="button">
-          <span class="settings-checkbox ${settings.backgroundMode === 'selectedBookCover' ? 'checked' : ''}">
-            ${settings.backgroundMode === 'selectedBookCover' ? '✓' : ''}
-          </span>
-          <span>顯示點選的書籍封面</span>
-        </button>
+    <button class="settings-check-option" data-background-mode="selectedBookCover" type="button">
+      <span class="settings-checkbox ${settings.backgroundMode === 'selectedBookCover' ? 'checked' : ''}">
+        ${settings.backgroundMode === 'selectedBookCover' ? '✓' : ''}
+      </span>
+      <span>顯示點選的書籍封面</span>
+    </button>
 
-        <button class="settings-check-option" data-background-mode="importedImage" type="button">
-          <span class="settings-checkbox ${settings.backgroundMode === 'importedImage' ? 'checked' : ''}">
-            ${settings.backgroundMode === 'importedImage' ? '✓' : ''}
-          </span>
-          <span>顯示匯入的圖片</span>
-        </button>
-      </div>
+    <button class="settings-check-option" data-background-mode="importedImage" type="button">
+      <span class="settings-checkbox ${settings.backgroundMode === 'importedImage' ? 'checked' : ''}">
+        ${settings.backgroundMode === 'importedImage' ? '✓' : ''}
+      </span>
+      <span>顯示本機匯入的圖片</span>
+    </button>
+  </div>
 
-      <div class="settings-inline">
-        <button id="pick-background-image-btn" type="button">選取背景圖片</button>
-        <span class="settings-hint">
-          ${settings.backgroundImagePath ? settings.backgroundImagePath : '尚未選取背景圖片'}
-        </span>
-      </div>
+  <div class="background-image-picker-block">
+    <button id="pick-background-image-btn" type="button">選取背景圖片</button>
+    <div class="settings-hint background-image-path">
+      目前匯入圖片：${settings.backgroundImagePath ? settings.backgroundImagePath : '尚未選取背景圖片'}
     </div>
+  </div>
 
-    <div class="settings-group">
-      <div class="settings-label">背景風格</div>
+  <div class="background-slider-row">
+    <div class="background-slider-label">透明度</div>
+    <input
+      id="background-opacity-range"
+      class="background-range"
+      type="range"
+      min="0"
+      max="100"
+      step="1"
+      value="${clampNumber(settings.backgroundOpacity, 0, 100, 20)}"
+      title="${clampNumber(settings.backgroundOpacity, 0, 100, 20)}"
+    >
+  </div>
 
-      <div class="settings-group">
-        <div class="settings-label">透明度</div>
-        <input
-          id="background-opacity-range"
-          type="range"
-          min="0"
-          max="100"
-          step="1"
-          value="${clampNumber(settings.backgroundOpacity, 0, 100, 16)}"
-        >
-      </div>
-
-      <div class="settings-group">
-        <div class="settings-label">模糊度</div>
-        <input
-          id="background-blur-range"
-          type="range"
-          min="0"
-          max="40"
-          step="1"
-          value="${clampNumber(settings.backgroundBlur, 0, 40, 2)}"
-        >
-      </div>
-    </div>
+  <div class="background-slider-row">
+    <div class="background-slider-label">模糊度</div>
+    <input
+      id="background-blur-range"
+      class="background-range"
+      type="range"
+      min="0"
+      max="40"
+      step="1"
+      value="${clampNumber(settings.backgroundBlur, 0, 40, 0)}"
+      title="${clampNumber(settings.backgroundBlur, 0, 40, 0)}"
+    >
+  </div>
+</div>
   `;
 
   bindAppearanceSectionEvents();
@@ -834,22 +834,32 @@ function bindAppearanceSectionEvents() {
   });
 
   document.getElementById('background-opacity-range')?.addEventListener('input', async (event) => {
-    settings.backgroundOpacity = clampNumber(event.target.value, 0, 100, 16);
+    settings.backgroundOpacity = clampNumber(event.target.value, 0, 100, 20);
+    event.target.title = String(settings.backgroundOpacity);
     await applySettingsPageBackground();
   });
 
+  document.getElementById('background-opacity-range')?.addEventListener('mouseenter', (event) => {
+    event.target.title = String(clampNumber(event.target.value, 0, 100, 20));
+  });
+
   document.getElementById('background-opacity-range')?.addEventListener('change', async (event) => {
-    settings.backgroundOpacity = clampNumber(event.target.value, 0, 100, 16);
+    settings.backgroundOpacity = clampNumber(event.target.value, 0, 100, 20);
     settings = await window.readerAPI.saveAppSettings(settings);
   });
 
   document.getElementById('background-blur-range')?.addEventListener('input', async (event) => {
-    settings.backgroundBlur = clampNumber(event.target.value, 0, 40, 2);
+    settings.backgroundBlur = clampNumber(event.target.value, 0, 40, 0);
+    event.target.title = String(settings.backgroundBlur);
     await applySettingsPageBackground();
   });
 
+  document.getElementById('background-blur-range')?.addEventListener('mouseenter', (event) => {
+    event.target.title = String(clampNumber(event.target.value, 0, 40, 0));
+  });
+
   document.getElementById('background-blur-range')?.addEventListener('change', async (event) => {
-    settings.backgroundBlur = clampNumber(event.target.value, 0, 40, 2);
+    settings.backgroundBlur = clampNumber(event.target.value, 0, 40, 0);
     settings = await window.readerAPI.saveAppSettings(settings);
   });
 }

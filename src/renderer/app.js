@@ -66,6 +66,11 @@ let appSettings = {
   backgroundBlur: 2,
 };
 
+// ===== 封面尺寸設定 =====
+const GRID_COVER_WIDTH = 600;
+const RECENT_COVER_WIDTH = 450;
+const DETAIL_COVER_WIDTH = 750;
+
 // ===== 封面快取與工作佇列 =====
 const coverUrlCache = new Map();
 const coverJobQueue = [];
@@ -281,7 +286,7 @@ async function resolveSelectedBookBackgroundUrl() {
 
   const cachedCoverDataUrl = await window.readerAPI.readCoverData(
     selectedBook.filePath,
-    600
+    DETAIL_COVER_WIDTH
   );
 
   if (cachedCoverDataUrl) {
@@ -464,7 +469,7 @@ async function renderRecentReadingSection() {
       );
 
       if (img && !img.src && img.dataset.coverFailed !== 'true') {
-        loadCover(book, img, 330);
+        loadCover(book, img, RECENT_COVER_WIDTH);
       }
     });
 
@@ -474,7 +479,7 @@ async function renderRecentReadingSection() {
 
     const img = document.querySelector(`[data-recent-cover-book-id="${book.id}"]`);
     if (img) {
-      loadCover(book, img, 330);
+      loadCover(book, img, RECENT_COVER_WIDTH);
     }
   });
 }
@@ -495,7 +500,7 @@ function uint8ArrayToBase64(bytes) {
 /**
  * 生成 PDF 第一頁封面 canvas
  */
-async function generatePdfCoverCanvas(filePath, width = 400) {
+async function generatePdfCoverCanvas(filePath, width = GRID_COVER_WIDTH) {
   const pdfBuffer = await window.readerAPI.readPdfFile(filePath);
   const pdfData = new Uint8Array(pdfBuffer);
 
@@ -542,7 +547,7 @@ function getSortedCbzImageNames(zipEntries) {
 /**
  * 從 CBZ 生成封面 dataURL
  */
-async function generateCbzCoverDataUrl(filePath, width = 400) {
+async function generateCbzCoverDataUrl(filePath, width = GRID_COVER_WIDTH) {
   const cbzBuffer = await window.readerAPI.readCbzFile(filePath);
   const cbzData = new Uint8Array(cbzBuffer);
 
@@ -707,7 +712,7 @@ async function loadCoverNow(book, imgElement, width = 400) {
 /**
  * 封面載入入口
  */
-function loadCover(book, imgElement, width = 400) {
+function loadCover(book, imgElement, width = GRID_COVER_WIDTH) {
   if (!book || !imgElement) return;
   if (imgElement.src) return;
   if (imgElement.dataset.coverFailed === 'true') return;
@@ -785,8 +790,47 @@ function renderDetailPanel() {
   });
 
   const detailCoverImg = document.getElementById('detail-cover-preview');
-  loadCover(selectedBook, detailCoverImg, 600);
+  loadCover(selectedBook, detailCoverImg, DETAIL_COVER_WIDTH);
+  bindBackgroundToDetailCover(detailCoverImg);
   updateReadingProgressText(selectedBook);
+}
+
+/**
+ * 當背景模式為 selectedBookCover 時，
+ * 直接使用 detail-panel 的封面同步背景，
+ * 避免第一次渲染時還要另外等快取讀取。
+ */
+function syncBackgroundFromDetailCover(imgElement) {
+  if (!imgElement) return;
+  if (appSettings.backgroundMode !== 'selectedBookCover') return;
+
+  const currentSrc = imgElement.currentSrc || imgElement.src || '';
+  if (!currentSrc) return;
+
+  applyBackgroundStyle(
+    currentSrc,
+    appSettings.backgroundOpacity,
+    appSettings.backgroundBlur
+  );
+}
+
+/**
+ * 綁定 detail 封面載入完成後同步背景
+ */
+function bindBackgroundToDetailCover(imgElement) {
+  if (!imgElement) return;
+  if (appSettings.backgroundMode !== 'selectedBookCover') return;
+
+  const trySync = () => {
+    syncBackgroundFromDetailCover(imgElement);
+  };
+
+  if (imgElement.complete && imgElement.src) {
+    trySync();
+    return;
+  }
+
+  imgElement.addEventListener('load', trySync, { once: true });
 }
 
 /**
@@ -935,7 +979,7 @@ async function renderBookGrid() {
       const img = document.querySelector(`[data-cover-book-id="${bookId}"]`);
 
       if (book && img && !img.src && img.dataset.coverFailed !== 'true') {
-        loadCover(book, img, 400);
+        loadCover(book, img, GRID_COVER_WIDTH);
       }
     });
 
@@ -955,13 +999,13 @@ async function renderBookGrid() {
     );
   
     if (selectedImg) {
-      loadCover(selectedBook, selectedImg, 400);
+      loadCover(selectedBook, selectedImg, GRID_COVER_WIDTH);
     }
   }
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      loadVisibleCovers(400);
+      loadVisibleCovers(GRID_COVER_WIDTH);
     });
   });
 
@@ -1007,7 +1051,7 @@ function getVisibleBookCards(buffer = 200) {
 /**
  * 優先載入目前視窗可見範圍內的所有書籍封面
  */
-function loadVisibleCovers(width = 400) {
+function loadVisibleCovers(width = GRID_COVER_WIDTH) {
   const visibleCards = getVisibleBookCards(200);
 
   visibleCards.forEach((card) => {
@@ -1062,7 +1106,7 @@ function lazyLoadRemainingCovers() {
     const img = document.querySelector(`[data-cover-book-id="${book.id}"]`);
 
     if (book && img && !img.src && img.dataset.coverFailed !== 'true') {
-      loadCover(book, img, 400);
+      loadCover(book, img, GRID_COVER_WIDTH);
     }
 
     index += 1;
@@ -1120,7 +1164,7 @@ async function refreshLibrary({ scrollToSelected = false } = {}) {
         scrollSelectedBookToTop();
       }
 
-      loadVisibleCovers(400);
+      loadVisibleCovers(GRID_COVER_WIDTH);
       lazyLoadRemainingCovers();
     });
   });
@@ -1297,7 +1341,7 @@ librarySection?.addEventListener('scroll', () => {
   }
 
   visibleCoverLoadTimer = setTimeout(() => {
-    loadVisibleCovers(400);
+    loadVisibleCovers(GRID_COVER_WIDTH);
   }, 60);
 });
 
