@@ -528,6 +528,16 @@ function renderLibrarySection() {
     renderSection();
   });
 
+  input?.addEventListener('keydown', async (event) => {
+    if (event.key !== 'Enter') return;
+
+    event.preventDefault();
+
+    settings.displayLibraryName = event.target.value;
+    settings = await window.readerAPI.saveAppSettings(settings);
+    renderSection();
+  });
+
   document.getElementById('book-sort-options')?.addEventListener('click', async (event) => {
     const option = event.target.closest('[data-sort-mode]');
     if (!option) return;
@@ -1142,6 +1152,7 @@ function renderAutoplaySection() {
         >
         <span class="settings-unit">秒</span>
       </div>
+      <div class="settings-hint">設定循環播放，切換至下一頁的間隔秒數</div>
     </div>
   `;
 

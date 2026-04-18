@@ -151,13 +151,22 @@ body {
 }
 
 .toolbar-page-indicator {
-  min-width: 50px;
-  padding: 5px 16px;
+  min-width: 88px;
+  width: 120px;
+  height: 30px;
+  padding: 0 12px;
   text-align: center;
   border-radius: 10px;
+  border: 1px solid var(--theme-input-border);
   background: rgba(255, 255, 255, 0.08);
   color: var(--theme-text);
   font-size: 14px;
+  outline: none;
+}
+
+.toolbar-page-indicator.editing {
+  border-color: var(--theme-accent);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 #mode-icon-outer {

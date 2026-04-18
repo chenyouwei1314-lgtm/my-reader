@@ -82,6 +82,8 @@ let autoPlayIntervalMs = 5000;
 
 // 我的最愛
 let currentBookTags = {};
+let isPageIndicatorEditing = false;
+let pageIndicatorDraftValue = '';
 
 // =========================================================
 // 簡單記憶體快取
@@ -200,11 +202,99 @@ async function restoreReadingProgress() {
 }
 
 function updatePageIndicator() {
-  if (pageIndicator) {
-    pageIndicator.textContent = `${clampPage(currentPage)} / ${totalPages || 1}`;
+  if (!pageIndicator) {
+    queueSaveReadingProgress();
+    return;
+  }
+
+  if (isPageIndicatorEditing) {
+    pageIndicator.value = `${pageIndicatorDraftValue} / ${totalPages || 1}`;
+  } else {
+    pageIndicator.value = `${clampPage(currentPage)} / ${totalPages || 1}`;
   }
 
   queueSaveReadingProgress();
+}
+
+function setPageIndicatorEditing(editing) {
+  if (!pageIndicator) return;
+
+  isPageIndicatorEditing = editing;
+  pageIndicator.classList.toggle('editing', editing);
+  pageIndicator.readOnly = !editing;
+
+  if (editing) {
+    pageIndicatorDraftValue = String(clampPage(currentPage));
+    pageIndicator.value = `${pageIndicatorDraftValue} / ${totalPages || 1}`;
+
+    requestAnimationFrame(() => {
+      pageIndicator.focus();
+
+      const endIndex = pageIndicatorDraftValue.length;
+      pageIndicator.setSelectionRange(0, endIndex);
+    });
+
+    return;
+  }
+
+  pageIndicatorDraftValue = '';
+  pageIndicator.value = `${clampPage(currentPage)} / ${totalPages || 1}`;
+}
+
+function extractDraftPageNumber(text) {
+  const value = String(text || '').trim();
+  const match = value.match(/^\s*(\d+)/);
+  return match ? match[1] : '';
+}
+
+function handlePageIndicatorInput() {
+  if (!isPageIndicatorEditing || !pageIndicator) return;
+
+  const draftNumber = extractDraftPageNumber(pageIndicator.value);
+  pageIndicatorDraftValue = draftNumber;
+
+  pageIndicator.value = `${draftNumber} / ${totalPages || 1}`;
+
+  const endIndex = draftNumber.length;
+  pageIndicator.setSelectionRange(endIndex, endIndex);
+}
+
+async function commitPageIndicatorInput() {
+  if (!isPageIndicatorEditing || !pageIndicator) return;
+
+  const draftNumber = extractDraftPageNumber(pageIndicator.value);
+  const nextPage = Number(draftNumber);
+
+  const isValid =
+    draftNumber !== '' &&
+    Number.isInteger(nextPage) &&
+    nextPage >= 1 &&
+    nextPage <= totalPages;
+
+  setPageIndicatorEditing(false);
+
+  if (!isValid) {
+    updatePageIndicator();
+    return;
+  }
+
+  if (nextPage === currentPage) {
+    updatePageIndicator();
+    return;
+  }
+
+  await jumpToPage(nextPage, {
+    updateIndicator: true,
+    animatePagedTurn: readerMode === 'paged',
+    forceInstant: false,
+    direction: nextPage > currentPage ? 1 : -1,
+  });
+}
+
+function cancelPageIndicatorInput() {
+  if (!isPageIndicatorEditing) return;
+  setPageIndicatorEditing(false);
+  updatePageIndicator();
 }
 
 function getPageWrapper(pageNumber) {
@@ -424,7 +514,7 @@ function clearAutoPlayTimer() {
 }
 
 function canUseAutoPlay() {
-  return readerMode === 'paged' && totalPages > 0;
+  return readerMode === 'paged' && pageFitMode === 'height' && totalPages > 0;
 }
 
 function updateAutoPlayButton() {
@@ -1201,7 +1291,7 @@ async function setReaderMode(nextMode, force = false) {
   readerMode = nextMode;
   currentPage = anchorPage;
 
-  if (readerMode !== 'paged' && isAutoPlaying) {
+  if (isAutoPlaying && !canUseAutoPlay()) {
     stopAutoPlay();
   }
 
@@ -1220,11 +1310,16 @@ async function setPageFitMode(nextFitMode, force = false) {
   pageFitMode = nextFitMode;
   currentPage = anchorPage;
 
+  if (isAutoPlaying && !canUseAutoPlay()) {
+    stopAutoPlay();
+  }
+
   clearPdfCache();
   clearCbzCache();
 
   updateReaderContainerModeClass();
   updateFitButtons();
+  updateAutoPlayButton();
 
   await renderDocumentStructure(anchorPage);
 }
@@ -1500,7 +1595,42 @@ autoplayBtn?.addEventListener('click', () => {
   toggleAutoPlay();
 });
 
+pageIndicator?.addEventListener('click', (event) => {
+  event.stopPropagation();
+
+  if (isPageIndicatorEditing) return;
+  if (!totalPages) return;
+
+  setPageIndicatorEditing(true);
+});
+
+pageIndicator?.addEventListener('input', () => {
+  handlePageIndicatorInput();
+});
+
+pageIndicator?.addEventListener('keydown', async (event) => {
+  if (!isPageIndicatorEditing) return;
+
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    await commitPageIndicatorInput();
+    return;
+  }
+
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    cancelPageIndicatorInput();
+  }
+});
+
+pageIndicator?.addEventListener('blur', async () => {
+  if (!isPageIndicatorEditing) return;
+  await commitPageIndicatorInput();
+});
+
 document.addEventListener('keydown', async (event) => {
+  if (isPageIndicatorEditing) return;
+
   if (event.key === 'Escape' && isFullscreen) {
     await toggleFullscreen();
     return;
