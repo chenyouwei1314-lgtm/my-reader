@@ -64,6 +64,7 @@ html, body {
   max-width: 100%;
   color: var(--theme-text);
   font-size: 20px;
+  font-weight: bold;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -226,9 +227,16 @@ button:hover {
   box-sizing: border-box;
 }
 
+.detail-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px 0;
+}
+
 .detail-empty {
   color: var(--theme-muted-text);
-  margin-top: 20px;
 }
 
 .detail-cover {
@@ -240,7 +248,6 @@ button:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 20px;
   overflow: hidden;
 }
 
@@ -253,23 +260,22 @@ button:hover {
 
 .detail-title {
   color: var(--theme-text);
-  font-size: 22px;
+  font-size: 20px;
   font-weight: bold;
-  margin-bottom: 12px;
+  line-height: 1.4;
   width: 100%;
   max-width: 100%;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
-  line-height: 1.5;
   word-break: break-all;
 }
 
 .detail-text {
+  font-size: 16px;
+  line-height: 1.5;
   color: var(--theme-muted-text);
-  line-height: 1.8;
-  margin-bottom: 8px;
 }
 
 .detail-panel,
@@ -279,19 +285,18 @@ button:hover {
   min-width: 0;
 }
 
+.detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .read-btn {
   height: 40px;
   flex: 1 1 auto;
   font-size: 16px;
   padding: 5px 16px;
   width: 240px;
-}
-
-.detail-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 20px;
 }
 
 .favorite-btn {
@@ -318,6 +323,7 @@ button:hover {
   gap: 10px;
   font-size: 20px;
   font-weight: 700;
+  line-height: 1;
 }
 
 .recent-reading-icon {

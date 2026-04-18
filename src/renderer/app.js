@@ -766,13 +766,15 @@ function renderDetailPanel() {
     return;
   }
 
-  detailPanel.innerHTML = `
+  detailPanel.innerHTML = `   
     <div class="detail-cover">
-      <img class="detail-cover-img" id="detail-cover-preview" alt="封面預覽">
+        <img class="detail-cover-img" id="detail-cover-preview" alt="封面預覽">
+      </div>
+    <div class="detail-group">
+      <div class="detail-title">${selectedBook.title}</div>
+      <div class="detail-text">類型：${selectedBook.type.toUpperCase()}</div>
+      <div class="detail-text" id="progress-text">進度：讀取中...</div>  
     </div>
-    <div class="detail-title">${selectedBook.title}</div>
-    <div class="detail-text">類型：${selectedBook.type.toUpperCase()}</div>
-    <div class="detail-text" id="progress-text">進度：讀取中...</div>
     <div class="detail-actions">
       <button class="read-btn" id="read-btn">Read</button>
       ${getFavoriteButtonMarkup(selectedBook)}
