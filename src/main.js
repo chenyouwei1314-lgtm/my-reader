@@ -786,7 +786,7 @@ function createWindow() {
     width: 1400,
     height: 900,
     minWidth: 1000,
-    minHeight: 700,
+    minHeight: 750,
     autoHideMenuBar: true,
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,

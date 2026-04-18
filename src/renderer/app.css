@@ -182,18 +182,22 @@ button:hover {
   z-index: 3;
 }
 
-.book-cover {
+.book-cover, 
+.recent-book-cover,
+.detail-cover{
   width: 100%;
   aspect-ratio: 1269 / 1800;
+  border: none;
   background: linear-gradient(135deg, #2a2a2a, #3f3f3f);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ccc;
-  font-size: 14px;
+  overflow: hidden;
 }
 
-.book-cover-img {
+.book-cover-img,
+.detail-cover-img,
+.recent-book-cover-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -240,22 +244,8 @@ button:hover {
 }
 
 .detail-cover {
-  width: 100%;
   max-height: 50vh;
-  aspect-ratio: 1269 / 1800;
   border-radius: 15px;
-  background: linear-gradient(135deg, #2a2a2a, #3f3f3f);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.detail-cover-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
 }
 
 .detail-title {
@@ -383,13 +373,6 @@ button:hover {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-}
-
-.recent-book-cover-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
 }
 
 .recent-book-title {

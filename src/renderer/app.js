@@ -73,6 +73,23 @@ const GRID_COVER_WIDTH = 600;
 const RECENT_COVER_WIDTH = 450;
 const DETAIL_COVER_WIDTH = 750;
 
+// ===== 封面比例設定 =====
+const COVER_RATIO = 1269 / 1800;
+
+/**
+ * 依固定寬度，計算統一封面尺寸
+ * 不再依每本書原始比例決定最終高度
+ */
+function getNormalizedCoverSize(targetWidth) {
+  const safeWidth = Math.round(targetWidth);
+  const safeHeight = Math.round(safeWidth / COVER_RATIO);
+
+  return {
+    width: safeWidth,
+    height: safeHeight,
+  };
+}
+
 // ===== 封面快取與工作佇列 =====
 const coverUrlCache = new Map();
 const coverJobQueue = [];
@@ -531,6 +548,7 @@ function uint8ArrayToBase64(bytes) {
 
 /**
  * 生成 PDF 第一頁封面 canvas
+ * 封面輸出尺寸固定，不讓每本書各自決定高度
  */
 async function generatePdfCoverCanvas(filePath, width = GRID_COVER_WIDTH) {
   const pdfBuffer = await window.readerAPI.readPdfFile(filePath);
@@ -540,25 +558,61 @@ async function generatePdfCoverCanvas(filePath, width = GRID_COVER_WIDTH) {
   const pdf = await loadingTask.promise;
   const page = await pdf.getPage(1);
 
+  // 先取得 PDF 原始頁面尺寸
   const baseViewport = page.getViewport({ scale: 1 });
-  const scale = width / baseViewport.width;
-  const viewport = page.getViewport({ scale });
+
+  // 統一目標輸出尺寸
+  const normalizedSize = getNormalizedCoverSize(width);
+  const targetWidth = normalizedSize.width;
+  const targetHeight = normalizedSize.height;
+
+  // 這裡先用寬度去算實際 render scale
+  const renderScale = targetWidth / baseViewport.width;
+  const renderViewport = page.getViewport({ scale: renderScale });
 
   const outputScale = window.devicePixelRatio || 1;
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
 
-  canvas.width = Math.floor(viewport.width * outputScale);
-  canvas.height = Math.floor(viewport.height * outputScale);
-  canvas.style.width = `${Math.floor(viewport.width)}px`;
-  canvas.style.height = `${Math.floor(viewport.height)}px`;
+  canvas.width = Math.round(targetWidth * outputScale);
+  canvas.height = Math.round(targetHeight * outputScale);
+  canvas.style.width = `${targetWidth}px`;
+  canvas.style.height = `${targetHeight}px`;
 
   context.setTransform(outputScale, 0, 0, outputScale, 0, 0);
 
+  // 先把背景填滿，避免邊界透明時露底
+  context.fillStyle = '#2a2a2a';
+  context.fillRect(0, 0, targetWidth, targetHeight);
+
+  // 讓 PDF 內容以 cover 方式填滿固定尺寸
+  const renderWidth = renderViewport.width;
+  const renderHeight = renderViewport.height;
+
+  const drawScale = Math.max(
+    targetWidth / renderWidth,
+    targetHeight / renderHeight
+  );
+
+  const drawWidth = renderWidth * drawScale;
+  const drawHeight = renderHeight * drawScale;
+
+  const offsetX = (targetWidth - drawWidth) / 2;
+  const offsetY = (targetHeight - drawHeight) / 2;
+
+  context.save();
+  context.beginPath();
+  context.rect(0, 0, targetWidth, targetHeight);
+  context.clip();
+  context.translate(offsetX, offsetY);
+  context.scale(drawScale, drawScale);
+
   await page.render({
     canvasContext: context,
-    viewport,
+    viewport: renderViewport,
   }).promise;
+
+  context.restore();
 
   return canvas;
 }
@@ -578,6 +632,7 @@ function getSortedCbzImageNames(zipEntries) {
 
 /**
  * 從 CBZ 生成封面 dataURL
+ * 封面輸出尺寸固定，不讓每本圖片各自決定高度
  */
 async function generateCbzCoverDataUrl(filePath, width = GRID_COVER_WIDTH) {
   const cbzBuffer = await window.readerAPI.readCbzFile(filePath);
@@ -612,21 +667,39 @@ async function generateCbzCoverDataUrl(filePath, width = GRID_COVER_WIDTH) {
     img.src = sourceDataUrl;
   });
 
-  const scale = width / image.width;
-  const targetWidth = Math.floor(image.width * scale);
-  const targetHeight = Math.floor(image.height * scale);
+  // 統一目標輸出尺寸
+  const normalizedSize = getNormalizedCoverSize(width);
+  const targetWidth = normalizedSize.width;
+  const targetHeight = normalizedSize.height;
 
   const outputScale = window.devicePixelRatio || 1;
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
 
-  canvas.width = Math.floor(targetWidth * outputScale);
-  canvas.height = Math.floor(targetHeight * outputScale);
+  canvas.width = Math.round(targetWidth * outputScale);
+  canvas.height = Math.round(targetHeight * outputScale);
   canvas.style.width = `${targetWidth}px`;
   canvas.style.height = `${targetHeight}px`;
 
   context.setTransform(outputScale, 0, 0, outputScale, 0, 0);
-  context.drawImage(image, 0, 0, targetWidth, targetHeight);
+
+  // 先填背景，避免邊界露底
+  context.fillStyle = '#2a2a2a';
+  context.fillRect(0, 0, targetWidth, targetHeight);
+
+  // 以 cover 方式畫進固定比例 canvas
+  const drawScale = Math.max(
+    targetWidth / image.width,
+    targetHeight / image.height
+  );
+
+  const drawWidth = image.width * drawScale;
+  const drawHeight = image.height * drawScale;
+
+  const offsetX = (targetWidth - drawWidth) / 2;
+  const offsetY = (targetHeight - drawHeight) / 2;
+
+  context.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
 
   return canvas.toDataURL('image/jpeg', 0.85);
 }
