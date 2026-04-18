@@ -859,6 +859,7 @@ function createReaderWindow(filePath, title) {
     `&accent=${encodeURIComponent(safeAccent)}`;
 
   readerWindow.loadURL(readerUrl);
+  readerWindow.maximize();
 
   readerWindow.on('closed', () => {
     readerWindow = null;
