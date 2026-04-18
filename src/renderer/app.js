@@ -730,11 +730,20 @@ function loadCover(book, imgElement, width = GRID_COVER_WIDTH) {
 }
 
 // ===== 視圖更新：閱讀器 / 詳細欄 =====
-function openReader(bookId) {
+async function openReader(bookId) {
   const book = getBookById(bookId);
   if (!book) return;
 
-  window.readerAPI.openReaderWindow(book);
+  const opened = await window.readerAPI.openReaderWindow(book);
+  if (!opened) return;
+
+  const targetBook = getBookById(bookId);
+  if (targetBook) {
+    targetBook.readingProgress = await window.readerAPI.getReadingProgress(targetBook.filePath);
+  }
+
+  await renderRecentReadingSection();
+  await rerenderBookGridIfSortAffected();
 }
 
 function getFavoriteButtonMarkup(book) {
@@ -1307,6 +1316,7 @@ window.addEventListener('focus', async () => {
     selectedBook.tags = latestTags || {};
     updateBookCardFavoriteState(selectedBook.id);
     renderDetailPanel();
+    await renderRecentReadingSection();
   } catch (error) {
     console.error('focus 時同步最愛狀態失敗:', error);
   }
@@ -1351,6 +1361,7 @@ window.readerAPI?.onAllReadingProgressCleared?.(async () => {
   }
 
   await renderBookGrid();
+  await renderRecentReadingSection();
 });
 
 librarySection?.addEventListener('scroll', () => {

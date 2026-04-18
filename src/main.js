@@ -708,6 +708,13 @@ function getRecentReading() {
     .slice(0, 10);
 }
 
+function clearRecentReading() {
+  const state = loadAppState();
+  state.recentReading = [];
+  saveAppState(state);
+  return true;
+}
+
 // ===== 書庫掃描 =====
 /**
  * 掃描指定資料夾，回傳書籍列表
@@ -1064,6 +1071,10 @@ function registerReaderIpc() {
 
   ipcMain.handle('get-recent-reading', async () => {
     return getRecentReading();
+  });
+
+  ipcMain.handle('clear-recent-reading', async () => {
+    return clearRecentReading();
   });
 }
 

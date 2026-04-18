@@ -1126,6 +1126,7 @@ function renderHistorySection() {
     if (!clearReadingProgressChecked) return;
 
     await window.readerAPI.clearAllReadingProgress?.();
+    await window.readerAPI.clearRecentReading?.();
     clearReadingProgressChecked = false;
     renderSection();
   });

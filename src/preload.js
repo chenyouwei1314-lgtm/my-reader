@@ -66,6 +66,7 @@ contextBridge.exposeInMainWorld('readerAPI', {
     ipcRenderer.invoke('set-book-favorite', { filePath, isFavorite }),
 
   getRecentReading: () => ipcRenderer.invoke('get-recent-reading'),
+  clearRecentReading: () => ipcRenderer.invoke('clear-recent-reading'),
 
   getLibraryHistory: () => ipcRenderer.invoke('get-library-history'),
   pushLibraryHistory: (folderPath) => ipcRenderer.invoke('push-library-history', folderPath),
