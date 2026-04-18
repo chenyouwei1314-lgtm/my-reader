@@ -49,6 +49,9 @@ const fullscreenIconPath = document.getElementById('fullscreen-icon-path');
 let currentLibraryPath = '';
 let isFullscreen = false;
 let activeSection = 'library';
+let libraryHistoryPaths = [];
+let pendingHistoryLibraryPath = '';
+let clearReadingProgressChecked = false;
 
 let settings = {
   displayLibraryName: '',
@@ -117,6 +120,64 @@ function clampNumber(value, min, max, fallback) {
   }
 
   return Math.min(max, Math.max(min, numberValue));
+}
+
+/**
+ * 重設「紀錄」區塊的暫存點選狀態
+ */
+function resetHistoryDraftState() {
+  pendingHistoryLibraryPath = '';
+  clearReadingProgressChecked = false;
+}
+
+/**
+ * 更新 range 數值泡泡的位置與文字
+ */
+function updateRangeTooltip(rangeInput, tooltipEl) {
+  if (!rangeInput || !tooltipEl) return;
+
+  const min = Number(rangeInput.min) || 0;
+  const max = Number(rangeInput.max) || 100;
+  const value = Number(rangeInput.value) || 0;
+
+  const percent = max === min ? 0 : (value - min) / (max - min);
+  tooltipEl.textContent = String(value);
+
+  const thumbSize = 18;
+  const inputWidth = rangeInput.offsetWidth;
+  const offsetX = percent * (inputWidth - thumbSize) + thumbSize / 2;
+
+  tooltipEl.style.left = `${offsetX}px`;
+}
+
+/**
+ * 綁定 range 的拖曳數值泡泡
+ */
+function bindRangeTooltip(rangeInput, tooltipEl) {
+  if (!rangeInput || !tooltipEl) return;
+
+  const showTooltip = () => {
+    updateRangeTooltip(rangeInput, tooltipEl);
+    tooltipEl.classList.add('show');
+  };
+
+  const hideTooltip = () => {
+    tooltipEl.classList.remove('show');
+  };
+
+  rangeInput.addEventListener('input', showTooltip);
+  rangeInput.addEventListener('pointerdown', showTooltip);
+  rangeInput.addEventListener('mousedown', showTooltip);
+  rangeInput.addEventListener('touchstart', showTooltip, { passive: true });
+
+  rangeInput.addEventListener('pointerup', hideTooltip);
+  rangeInput.addEventListener('mouseup', hideTooltip);
+  rangeInput.addEventListener('touchend', hideTooltip);
+  rangeInput.addEventListener('blur', hideTooltip);
+
+  window.addEventListener('resize', () => updateRangeTooltip(rangeInput, tooltipEl));
+
+  updateRangeTooltip(rangeInput, tooltipEl);
 }
 
 // ===== 主題工具 =====
@@ -336,6 +397,28 @@ async function applySettingsPageBackground() {
   }
 }
 
+/**
+ * 套用新的書庫路徑，並同步更新第一本書與背景
+ */
+async function applyLibraryChange(folderPath) {
+  if (!folderPath) return;
+
+  currentLibraryPath = folderPath;
+
+  libraryHistoryPaths = await window.readerAPI.getLibraryHistory?.() || [];
+
+  const scannedBooks = await window.readerAPI.scanLibrary(folderPath);
+  const firstBook = Array.isArray(scannedBooks) && scannedBooks.length > 0
+    ? scannedBooks[0]
+    : null;
+
+  await window.readerAPI.saveLastSelectedBook(firstBook?.filePath || '');
+
+  if (settings.backgroundMode === 'selectedBookCover') {
+    await applySettingsPageBackground();
+  }
+}
+
 // ===== 各區塊渲染：書庫 =====
 /**
  * 渲染「書庫」區塊
@@ -350,22 +433,24 @@ function renderLibrarySection() {
 
     <div class="settings-group">
       <div class="settings-label">書庫資料夾</div>
-      <button id="pick-folder-btn">選取書庫資料夾</button>
-      <div class="settings-hint">
-        從本機選擇欲瀏覽的資料夾並匯入
+      <div class="settings-block">
+        <button id="pick-folder-btn" class="settings-control" type="button">選取書庫資料夾</button>
       </div>
+      <div class="settings-hint">從本機選擇欲瀏覽的資料夾並匯入</div>
     </div>
 
     <div class="settings-group">
       <div class="settings-label">書庫名稱</div>
-      <input
-        id="display-library-name-input"
-        class="settings-input"
-        type="text"
-        maxlength="120"
-        placeholder="未填寫時顯示完整路徑"
-        value="${settings.displayLibraryName || ''}"
-      >
+      <div class="settings-block">
+        <input
+          id="display-library-name-input"
+          class="settings-input settings-control"
+          type="text"
+          maxlength="120"
+          placeholder="未填寫時顯示完整路徑"
+          value="${settings.displayLibraryName || ''}"
+        >
+      </div>
       <div class="settings-hint" id="display-library-name-hint">
         輸入書庫名稱，於書庫左上角顯示：${getDisplayLibraryName()}
       </div>
@@ -373,7 +458,9 @@ function renderLibrarySection() {
 
     <div class="settings-group">
       <div class="settings-label">書庫路徑</div>
-      <div class="settings-value">${currentLibraryPath || '尚未選擇書庫資料夾'}</div>
+      <div class="settings-block">
+        <div class="settings-value settings-control">${currentLibraryPath || '尚未選擇書庫資料夾'}</div>
+      </div>
       <div class="settings-hint">
         未輸入書庫名稱時，於書庫左上角顯示路徑
       </div>
@@ -415,24 +502,14 @@ function renderLibrarySection() {
   `;
 
   document.getElementById('pick-folder-btn')?.addEventListener('click', async () => {
-    const folderPath = await window.readerAPI.pickLibraryFolder();
-    if (!folderPath) return;
+  const folderPath = await window.readerAPI.pickLibraryFolder();
+  if (!folderPath) return;
 
-    currentLibraryPath = folderPath;
+  await window.readerAPI.pushLibraryHistory?.(folderPath);
+  await applyLibraryChange(folderPath);
 
-    const scannedBooks = await window.readerAPI.scanLibrary(folderPath);
-    const firstBook = Array.isArray(scannedBooks) && scannedBooks.length > 0
-    ? scannedBooks[0]
-    : null;
-
-    await window.readerAPI.saveLastSelectedBook(firstBook?.filePath || '');
-
-    if (settings.backgroundMode === 'selectedBookCover') {
-      await applySettingsPageBackground();
-    }
-
-    renderSection();
-  });
+  renderSection();
+});
 
   const input = document.getElementById('display-library-name-input');
   const hint = document.getElementById('display-library-name-hint');
@@ -597,71 +674,79 @@ function renderAppearanceSection() {
       </div>
 
       <div class="settings-hint">
-        選擇個人主題顏色，可以自訂與保存顏色，須按下「套用」才會生效
+        選擇個人主題顏色，可以自訂與保存顏色，須按下 " 套用 " 才會生效
       </div>
     </div>
 
     <div class="settings-group">
-  <div class="settings-label">背景</div>
+      <div class="settings-label">背景</div>
 
-  <div class="settings-check-list" id="background-mode-options">
-    <button class="settings-check-option" data-background-mode="none" type="button">
-      <span class="settings-checkbox ${settings.backgroundMode === 'none' ? 'checked' : ''}">
-        ${settings.backgroundMode === 'none' ? '✓' : ''}
-      </span>
-      <span>不顯示</span>
-    </button>
+      <div class="settings-check-list" id="background-mode-options">
+        <button class="settings-check-option" data-background-mode="none" type="button">
+          <span class="settings-checkbox ${settings.backgroundMode === 'none' ? 'checked' : ''}">
+            ${settings.backgroundMode === 'none' ? '✓' : ''}
+          </span>
+          <span>不顯示</span>
+        </button>
 
-    <button class="settings-check-option" data-background-mode="selectedBookCover" type="button">
-      <span class="settings-checkbox ${settings.backgroundMode === 'selectedBookCover' ? 'checked' : ''}">
-        ${settings.backgroundMode === 'selectedBookCover' ? '✓' : ''}
-      </span>
-      <span>顯示點選的書籍封面</span>
-    </button>
+        <button class="settings-check-option" data-background-mode="selectedBookCover" type="button">
+          <span class="settings-checkbox ${settings.backgroundMode === 'selectedBookCover' ? 'checked' : ''}">
+            ${settings.backgroundMode === 'selectedBookCover' ? '✓' : ''}
+          </span>
+          <span>顯示點選的書籍封面</span>
+        </button>
 
-    <button class="settings-check-option" data-background-mode="importedImage" type="button">
-      <span class="settings-checkbox ${settings.backgroundMode === 'importedImage' ? 'checked' : ''}">
-        ${settings.backgroundMode === 'importedImage' ? '✓' : ''}
-      </span>
-      <span>顯示本機匯入的圖片</span>
-    </button>
-  </div>
+        <button class="settings-check-option" data-background-mode="importedImage" type="button">
+          <span class="settings-checkbox ${settings.backgroundMode === 'importedImage' ? 'checked' : ''}">
+            ${settings.backgroundMode === 'importedImage' ? '✓' : ''}
+          </span>
+          <span>顯示本機匯入的圖片</span>
+        </button>
+      </div>
 
-  <div class="background-image-picker-block">
-    <button id="pick-background-image-btn" type="button">選取背景圖片</button>
-    <div class="settings-hint background-image-path">
-      目前匯入圖片：${settings.backgroundImagePath ? settings.backgroundImagePath : '尚未選取背景圖片'}
+      <div class="background-image-picker-block">
+        <button id="pick-background-image-btn" class="settings-control" type="button">選取背景圖片</button>
+        <div class="settings-hint background-image-path">
+          目前匯入圖片：${settings.backgroundImagePath ? settings.backgroundImagePath : '尚未選取背景圖片'}
+        </div>
+      </div>
+
+      <div class="background-slider-row">
+        <div class="background-slider-label">透明度</div>
+        <div class="background-range-wrap">
+          <input
+          id="background-opacity-range"
+          class="background-range"
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          value="${clampNumber(settings.backgroundOpacity, 0, 100, 20)}"
+          >
+          <div id="background-opacity-tooltip" class="range-value-tooltip">
+            ${clampNumber(settings.backgroundOpacity, 0, 100, 20)}
+          </div>
+        </div>
+      </div>
+
+      <div class="background-slider-row">
+        <div class="background-slider-label">模糊度</div>
+        <div class="background-range-wrap">
+          <input
+          id="background-blur-range"
+          class="background-range"
+          type="range"
+          min="0"
+          max="40"
+          step="1"
+          value="${clampNumber(settings.backgroundBlur, 0, 40, 0)}"
+          >
+          <div id="background-blur-tooltip" class="range-value-tooltip">
+          ${clampNumber(settings.backgroundBlur, 0, 40, 0)}
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-
-  <div class="background-slider-row">
-    <div class="background-slider-label">透明度</div>
-    <input
-      id="background-opacity-range"
-      class="background-range"
-      type="range"
-      min="0"
-      max="100"
-      step="1"
-      value="${clampNumber(settings.backgroundOpacity, 0, 100, 20)}"
-      title="${clampNumber(settings.backgroundOpacity, 0, 100, 20)}"
-    >
-  </div>
-
-  <div class="background-slider-row">
-    <div class="background-slider-label">模糊度</div>
-    <input
-      id="background-blur-range"
-      class="background-range"
-      type="range"
-      min="0"
-      max="40"
-      step="1"
-      value="${clampNumber(settings.backgroundBlur, 0, 40, 0)}"
-      title="${clampNumber(settings.backgroundBlur, 0, 40, 0)}"
-    >
-  </div>
-</div>
   `;
 
   bindAppearanceSectionEvents();
@@ -679,6 +764,10 @@ function bindAppearanceSectionEvents() {
   const colorPicker = document.getElementById('appearance-color-picker');
   const saveBtn = document.getElementById('appearance-save-btn');
   const applyBtn = document.getElementById('appearance-apply-btn');
+  const opacityRange = document.getElementById('background-opacity-range');
+  const blurRange = document.getElementById('background-blur-range');
+  const opacityTooltip = document.getElementById('background-opacity-tooltip');
+  const blurTooltip = document.getElementById('background-blur-tooltip');
 
   lightBtn?.addEventListener('click', async () => {
     settings.appearanceTheme = 'light';
@@ -835,12 +924,7 @@ function bindAppearanceSectionEvents() {
 
   document.getElementById('background-opacity-range')?.addEventListener('input', async (event) => {
     settings.backgroundOpacity = clampNumber(event.target.value, 0, 100, 20);
-    event.target.title = String(settings.backgroundOpacity);
     await applySettingsPageBackground();
-  });
-
-  document.getElementById('background-opacity-range')?.addEventListener('mouseenter', (event) => {
-    event.target.title = String(clampNumber(event.target.value, 0, 100, 20));
   });
 
   document.getElementById('background-opacity-range')?.addEventListener('change', async (event) => {
@@ -850,18 +934,16 @@ function bindAppearanceSectionEvents() {
 
   document.getElementById('background-blur-range')?.addEventListener('input', async (event) => {
     settings.backgroundBlur = clampNumber(event.target.value, 0, 40, 0);
-    event.target.title = String(settings.backgroundBlur);
     await applySettingsPageBackground();
-  });
-
-  document.getElementById('background-blur-range')?.addEventListener('mouseenter', (event) => {
-    event.target.title = String(clampNumber(event.target.value, 0, 40, 0));
   });
 
   document.getElementById('background-blur-range')?.addEventListener('change', async (event) => {
     settings.backgroundBlur = clampNumber(event.target.value, 0, 40, 0);
     settings = await window.readerAPI.saveAppSettings(settings);
   });
+
+  bindRangeTooltip(opacityRange, opacityTooltip);
+  bindRangeTooltip(blurRange, blurTooltip);
 }
 
 // ===== 各區塊渲染：紀錄 =====
@@ -873,11 +955,71 @@ function renderHistorySection() {
     ? 'shown'
     : 'hidden';
 
+  const visibleHistoryPaths = libraryHistoryPaths
+  .filter((path) => path && path !== currentLibraryPath)
+  .slice(0, 3);
+
+  const historyPath1 = visibleHistoryPaths[0] || '目前沒有紀錄';
+  const historyPath2 = visibleHistoryPaths[1] || '目前沒有紀錄';
+  const historyPath3 = visibleHistoryPaths[2] || '目前沒有紀錄';
+
+  const canOpenHistoryFolder = Boolean(pendingHistoryLibraryPath);
+  const canClearReadingProgress = Boolean(clearReadingProgressChecked);
+
   settingsContent.innerHTML = `
     <h1 class="settings-section-title">紀錄</h1>
 
     <div class="settings-group">
-      <div class="settings-label">瀏覽紀錄介面</div>
+      <div class="settings-label">歷史書庫</div>
+
+      <div class="settings-block">
+  <button
+    class="settings-value-button settings-control ${pendingHistoryLibraryPath === visibleHistoryPaths[0] ? 'selected' : ''}"
+    id="history-library-path-1"
+    type="button"
+    ${visibleHistoryPaths[0] ? '' : 'disabled'}
+    title="${historyPath1}">
+    ${historyPath1}
+  </button>
+</div>
+
+<div class="settings-block">
+  <button
+    class="settings-value-button settings-control ${pendingHistoryLibraryPath === visibleHistoryPaths[1] ? 'selected' : ''}"
+    id="history-library-path-2"
+    type="button"
+    ${visibleHistoryPaths[1] ? '' : 'disabled'}
+    title="${historyPath2}">
+    ${historyPath2}
+  </button>
+</div>
+
+<div class="settings-block">
+  <button
+    class="settings-value-button settings-control ${pendingHistoryLibraryPath === visibleHistoryPaths[2] ? 'selected' : ''}"
+    id="history-library-path-3"
+    type="button"
+    ${visibleHistoryPaths[2] ? '' : 'disabled'}
+    title="${historyPath3}">
+    ${historyPath3}
+  </button>
+</div>
+
+      <div class="settings-block">
+        <button
+          id="open-history-library-btn"
+          class="settings-action-button settings-control"
+          type="button"
+          ${canOpenHistoryFolder ? '' : 'disabled'}>
+          開啟歷史書庫資料夾
+        </button>
+      </div>
+
+      <div class="settings-hint">確認選擇其中一個歷史書庫後，按下按鈕開啟</div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-label">最近閱讀</div>
 
       <div class="settings-check-list" id="reading-history-visibility-options">
         <button class="settings-check-option" data-history-visibility="hidden" type="button">
@@ -894,6 +1036,32 @@ function renderHistorySection() {
           <span>顯示</span>
         </button>
       </div>
+      <div class="settings-hint">選擇是否顯示最近閱讀介面</div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-label">閱讀進度</div>
+
+      <button
+        id="clear-reading-progress-check"
+        class="settings-check-option"
+        type="button">
+        <span class="settings-checkbox ${clearReadingProgressChecked ? 'checked' : ''}">
+          ${clearReadingProgressChecked ? '✓' : ''}
+        </span>
+        <span>清除所有的閱讀進度</span>
+      </button>
+
+      <div class="settings-block">
+        <button
+          id="confirm-clear-reading-progress-btn"
+          class="settings-action-button settings-control danger-button"
+          type="button"
+          ${canClearReadingProgress ? '' : 'disabled'}>
+          確認清除所有閱讀進度
+        </button>
+      </div>
+      <div class="settings-hint">確認清除後，所有書籍回到進度 " 未開始 " 狀態，重新紀錄</div>
     </div>
   `;
 
@@ -909,6 +1077,48 @@ function renderHistorySection() {
     settings = await window.readerAPI.saveAppSettings(settings);
     renderSection();
   });
+
+  const historyButtons = [
+    { id: 'history-library-path-1', path: visibleHistoryPaths[0] || '' },
+    { id: 'history-library-path-2', path: visibleHistoryPaths[1] || '' },
+    { id: 'history-library-path-3', path: visibleHistoryPaths[2] || '' },
+  ];
+
+  historyButtons.forEach(({ id, path }) => {
+    document.getElementById(id)?.addEventListener('click', () => {
+      if (!path) return;
+
+      pendingHistoryLibraryPath =
+        pendingHistoryLibraryPath === path ? '' : path;
+
+      renderSection();
+    });
+  });
+
+  document.getElementById('open-history-library-btn')?.addEventListener('click', async () => {
+  if (!pendingHistoryLibraryPath) return;
+
+  const openedPath = await window.readerAPI.openHistoryLibraryFolder?.(pendingHistoryLibraryPath);
+  if (!openedPath) return;
+
+  await applyLibraryChange(openedPath);
+
+  resetHistoryDraftState();
+  renderSection();
+});
+
+  document.getElementById('clear-reading-progress-check')?.addEventListener('click', () => {
+    clearReadingProgressChecked = !clearReadingProgressChecked;
+    renderSection();
+  });
+
+  document.getElementById('confirm-clear-reading-progress-btn')?.addEventListener('click', async () => {
+    if (!clearReadingProgressChecked) return;
+
+    await window.readerAPI.clearAllReadingProgress?.();
+    clearReadingProgressChecked = false;
+    renderSection();
+  });
 }
 
 // ===== 各區塊渲染：閱讀功能 =====
@@ -917,12 +1127,11 @@ function renderHistorySection() {
  */
 function renderAutoplaySection() {
   settingsContent.innerHTML = `
-    <h1 class="settings-section-title">循環播放</h1>
-    <p class="settings-hint">設定閱讀器切換頁模式的循環播放秒數。</p>
+    <h1 class="settings-section-title">閱讀功能細項</h1>
 
     <div class="settings-group">
-      <div class="settings-label">循環播放秒數</div>
-      <div class="settings-inline">
+      <div class="settings-label">循環播放間隔</div>
+      <div class="settings-row">
         <input
           id="autoplay-seconds-input"
           class="settings-input settings-number-input"
@@ -994,12 +1203,16 @@ function renderSection() {
  * 載入設定頁初始狀態
  */
 async function loadInitialState() {
-  const [folderPath, appSettings] = await Promise.all([
+  const [folderPath, appSettings, historyPaths] = await Promise.all([
     window.readerAPI.getLastLibraryFolder(),
     window.readerAPI.getAppSettings(),
+    window.readerAPI.getLibraryHistory?.() || [],
   ]);
 
   currentLibraryPath = folderPath || '';
+  libraryHistoryPaths = Array.isArray(historyPaths) ? historyPaths.slice(0, 3) : [];
+  pendingHistoryLibraryPath = '';
+  clearReadingProgressChecked = false;
 
   settings = {
     displayLibraryName: appSettings?.displayLibraryName || '',
@@ -1080,6 +1293,10 @@ backBtn?.addEventListener('click', async () => {
     cancelAppearancePreview();
   }
 
+  if (activeSection === 'history') {
+    resetHistoryDraftState();
+  }
+
   await window.readerAPI.openLibraryPage();
 });
 
@@ -1096,6 +1313,10 @@ settingsMenu?.addEventListener('click', (event) => {
 
   if (activeSection === 'appearance' && nextSection !== 'appearance') {
     cancelAppearancePreview();
+  }
+
+  if (activeSection === 'history' && nextSection !== 'history') {
+    resetHistoryDraftState();
   }
 
   activeSection = nextSection;

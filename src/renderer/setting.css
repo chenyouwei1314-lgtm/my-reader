@@ -26,6 +26,10 @@
   --theme-input-bg: rgba(255, 255, 255, 0.08);
   --theme-input-border: rgba(255, 255, 255, 0.14);
   --theme-button-text: #ffffff;
+
+  --settings-control-width: 490px;
+  --settings-group-gap: 10px;
+  --settings-section-gap: 30px;
 }
 
 /* =========================================================
@@ -246,7 +250,7 @@ button:hover {
 .settings-content {
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: var(--settings-section-gap);
 }
 
 .settings-section-title {
@@ -258,7 +262,7 @@ button:hover {
 .settings-group {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--settings-group-gap);
 }
 
 .settings-label {
@@ -277,24 +281,37 @@ button:hover {
   padding-top: 6px;
 }
 
-.settings-inline {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
 .settings-unit {
   color: var(--theme-muted-text);
   font-size: 14px;
 }
 
+/* 共用寬度與列排版 */
+.settings-block {
+  width: min(100%, var(--settings-control-width));
+}
+
+.settings-row {
+  width: min(100%, var(--settings-control-width));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-fill {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 共用控制元件 */
+.settings-control,
 #pick-folder-btn,
 #pick-background-image-btn,
 .settings-value,
 .settings-input {
-  width: min(100%, 490px);
-  font-size: 16px;
+  width: min(100%, var(--settings-control-width));
   height: 40px;
+  font-size: 16px;
 }
 
 .settings-value {
@@ -325,6 +342,60 @@ button:hover {
 .settings-number-input {
   width: 92px;
   padding-right: 8px;
+}
+
+.settings-inline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-value-button,
+.settings-action-button {
+  width: min(100%, var(--settings-control-width));
+  height: 40px;
+  font-size: 16px;
+}
+
+.settings-value-button {
+  border: 1px solid var(--theme-input-border);
+  justify-content: flex-start;
+  padding: 0 16px;
+  background: var(--theme-surface-bg);
+  color: var(--theme-muted-text);
+  text-align: left;
+  word-break: break-all;
+  overflow: hidden;
+}
+
+.settings-value-button.selected {
+  border-color: var(--theme-accent);
+  background: color-mix(in srgb, var(--theme-accent) 20%, var(--theme-surface-bg));
+  color: var(--theme-text);
+}
+
+.settings-value-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.settings-action-button {
+  background: var(--theme-accent);
+  color: var(--theme-button-text);
+}
+
+.settings-action-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.danger-button:disabled {
+  opacity: 0.45;
+}
+
+.danger-button:not(:disabled) {
+  background: var(--theme-accent);
+  color: var(--theme-button-text);
 }
 
 /* =========================================================
@@ -378,14 +449,14 @@ button:hover {
    Appearance Section
    ========================================================= */
 .appearance-theme-grid {
-  display: flex;
-  align-items: center;
+  width: min(100%, var(--settings-control-width));
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
-  flex-wrap: wrap;
 }
 
 .appearance-theme-option {
-  min-width: 240px;
+  width: 100%;
   height: 40px;
   padding: 0 14px;
   font-size: 16px;
@@ -417,7 +488,7 @@ button:hover {
 }
 
 .appearance-row {
-  width: 500px;
+  width: min(100%, var(--settings-control-width));
   display: flex;
   align-items: flex-start;
   gap: 10px;
@@ -437,11 +508,12 @@ button:hover {
 }
 
 .appearance-row-controls-fixed {
-  width: 500px;
+  flex: 1;
+  min-width: 0;
 }
 
 .appearance-row-controls-classic {
-  width: auto;
+  width: 100%;
   flex-wrap: nowrap;
 }
 
@@ -532,6 +604,7 @@ button:hover {
    Background Section
    ========================================================= */
 .background-image-picker-block {
+  width: min(100%, var(--settings-control-width));
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -542,7 +615,7 @@ button:hover {
 }
 
 .background-slider-row {
-  width: 500px;
+  width: min(100%, var(--settings-control-width));
   display: flex;
   align-items: center;
   gap: 10px;
@@ -558,14 +631,14 @@ button:hover {
 
 .background-range {
   flex: 1;
-  min-width: 300px;
+  min-width: 0;
 }
 
 /* =========================================================
    Range Slider
    ========================================================= */
 input[type="range"] {
-  width: min(100%, 30px);
+  width: 100%;
   height: 20px;
   appearance: none;
   background: transparent;
@@ -585,7 +658,7 @@ input[type="range"]::-webkit-slider-thumb {
   margin-top: -6px;
   border-radius: 50%;
   background: var(--theme-accent);
-  border: solid var(--theme-text);
+  border: 2px solid var(--theme-text);
 }
 
 input[type="range"]::-moz-range-track {
@@ -599,13 +672,57 @@ input[type="range"]::-moz-range-thumb {
   height: 18px;
   border-radius: 50%;
   background: var(--theme-accent);
-  border: solid var(--theme-text);
+  border: 2px solid var(--theme-text);
 }
 
 input[type="range"],
 input[type="range"]::-webkit-slider-thumb,
 input[type="range"]::-moz-range-thumb {
   cursor: pointer;
+}
+
+.background-range-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.range-value-tooltip {
+  position: absolute;
+  top: -42px;
+  left: 0;
+  transform: translateX(-50%);
+  min-width: 44px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: rgba(25, 25, 25, 0.92);
+  color: #ffffff;
+  font-size: 14px;
+  line-height: 34px;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  z-index: 5;
+}
+
+.range-value-tooltip::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  transform: translateX(-50%);
+  width: 10px;
+  height: 10px;
+  background: rgba(25, 25, 25, 0.92);
+  rotate: 45deg;
+}
+
+.range-value-tooltip.show {
+  opacity: 1;
 }
 
 /* =========================================================

@@ -32,7 +32,7 @@ contextBridge.exposeInMainWorld('readerAPI', {
   readCoverData: (filePath, width) =>
     ipcRenderer.invoke('read-cover-data', { filePath, width }),
   readImageData: (filePath) =>
-  ipcRenderer.invoke('read-image-data', filePath),
+    ipcRenderer.invoke('read-image-data', filePath),
 
   getPdfPageCache: (payload) => ipcRenderer.invoke('get-pdf-page-cache', payload),
   savePdfPageCache: (payload) => ipcRenderer.invoke('save-pdf-page-cache', payload),
@@ -40,6 +40,8 @@ contextBridge.exposeInMainWorld('readerAPI', {
   getReadingProgress: (filePath) => ipcRenderer.invoke('get-reading-progress', filePath),
   saveReadingProgress: (filePath, page, totalPages) =>
     ipcRenderer.invoke('save-reading-progress', { filePath, page, totalPages }),
+
+  clearAllReadingProgress: () => ipcRenderer.invoke('clear-all-reading-progress'),
 
   onBookTagsUpdated: (callback) => {
     ipcRenderer.on('book-tags-updated', (_event, payload) => {
@@ -53,9 +55,20 @@ contextBridge.exposeInMainWorld('readerAPI', {
     });
   },
 
+  onAllReadingProgressCleared: (callback) => {
+    ipcRenderer.on('all-reading-progress-cleared', () => {
+      callback();
+    });
+  },
+
   getBookTags: (filePath) => ipcRenderer.invoke('get-book-tags', filePath),
   setBookFavorite: (filePath, isFavorite) =>
     ipcRenderer.invoke('set-book-favorite', { filePath, isFavorite }),
 
   getRecentReading: () => ipcRenderer.invoke('get-recent-reading'),
+
+  getLibraryHistory: () => ipcRenderer.invoke('get-library-history'),
+  pushLibraryHistory: (folderPath) => ipcRenderer.invoke('push-library-history', folderPath),
+  openHistoryLibraryFolder: (folderPath) =>
+    ipcRenderer.invoke('open-history-library-folder', folderPath),
 });

@@ -1335,6 +1335,22 @@ window.readerAPI?.onReadingProgressUpdated?.(async ({ filePath, record }) => {
   await rerenderBookGridIfSortAffected();
 });
 
+window.readerAPI?.onAllReadingProgressCleared?.(async () => {
+  books = books.map((book) => ({
+    ...book,
+    readingProgress: null,
+  }));
+
+  if (selectedBookId) {
+    const selectedBook = getBookById(selectedBookId);
+    if (selectedBook) {
+      updateReadingProgressText(selectedBook);
+    }
+  }
+
+  await renderBookGrid();
+});
+
 librarySection?.addEventListener('scroll', () => {
   if (visibleCoverLoadTimer) {
     clearTimeout(visibleCoverLoadTimer);

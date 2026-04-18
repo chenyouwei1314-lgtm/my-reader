@@ -224,6 +224,7 @@ function loadAppState() {
     return {
       lastLibraryFolder: '',
       lastSelectedBookPath: '',
+      libraryHistory: [],
       readingProgress: {},
       bookTags: {},
       settings: {
@@ -237,11 +238,11 @@ function loadAppState() {
         savedColorHistory: [],
         backgroundMode: 'none',
         backgroundImagePath: '',
-        backgroundOpacity: 16,
-        backgroundBlur: 2,
+        backgroundOpacity: 20,
+        backgroundBlur: 0,
       },
       recentReading: [],
-    };
+    }
   }
 
   try {
@@ -254,6 +255,9 @@ function loadAppState() {
         typeof parsed.lastSelectedBookPath === 'string'
           ? parsed.lastSelectedBookPath
           : '',
+      libraryHistory: Array.isArray(parsed.libraryHistory)
+        ? parsed.libraryHistory.filter((item) => typeof item === 'string')
+        : [],
       readingProgress: parsed.readingProgress || {},
       bookTags: parsed.bookTags || {},
       recentReading: Array.isArray(parsed.recentReading) ? parsed.recentReading : [],
@@ -353,6 +357,46 @@ function saveLastLibraryFolder(folderPath) {
 function getLastLibraryFolder() {
   const state = loadAppState();
   return state.lastLibraryFolder || '';
+}
+
+function getLibraryHistory() {
+  const state = loadAppState();
+  const history = Array.isArray(state.libraryHistory) ? state.libraryHistory : [];
+
+  return history
+    .filter((folderPath) => folderPath && fs.existsSync(folderPath))
+    .slice(0, 3);
+}
+
+function pushLibraryHistory(folderPath) {
+  if (!folderPath || !fs.existsSync(folderPath)) {
+    return getLibraryHistory();
+  }
+
+  const state = loadAppState();
+  const history = Array.isArray(state.libraryHistory) ? state.libraryHistory : [];
+
+  state.libraryHistory = [
+    folderPath,
+    ...history.filter((item) => item !== folderPath),
+  ].slice(0, 3);
+
+  saveAppState(state);
+  return state.libraryHistory;
+}
+
+function clearAllReadingProgress() {
+  const state = loadAppState();
+  state.readingProgress = {};
+  saveAppState(state);
+}
+
+function broadcastAllReadingProgressCleared() {
+  const windows = BrowserWindow.getAllWindows();
+
+  windows.forEach((win) => {
+    win.webContents.send('all-reading-progress-cleared');
+  });
 }
 
 function saveLastSelectedBook(filePath) {
@@ -674,6 +718,7 @@ async function scanLibrary(folderPath) {
   }
 
   saveLastLibraryFolder(folderPath);
+  pushLibraryHistory(folderPath);
   ensureMyReaderDirs(folderPath);
 
   const existingIndex = loadLibraryIndex(folderPath);
@@ -890,6 +935,24 @@ function registerFolderIpc() {
 
   ipcMain.handle('scan-library', async (_event, folderPath) => {
     return await scanLibrary(folderPath);
+  });
+
+  ipcMain.handle('get-library-history', async () => {
+    return getLibraryHistory();
+  });
+
+  ipcMain.handle('push-library-history', async (_event, folderPath) => {
+    return pushLibraryHistory(folderPath);
+  });
+
+  ipcMain.handle('open-history-library-folder', async (_event, folderPath) => {
+    if (!folderPath || !fs.existsSync(folderPath)) {
+      return '';
+    }
+
+    saveLastLibraryFolder(folderPath);
+    pushLibraryHistory(folderPath);
+    return folderPath;
   });
 }
 
@@ -1130,6 +1193,12 @@ function registerProgressAndTagsIpc() {
 
   ipcMain.handle('save-reading-progress', async (_event, { filePath, page, totalPages }) => {
     return saveReadingProgress(filePath, page, totalPages);
+  });
+
+  ipcMain.handle('clear-all-reading-progress', async () => {
+    clearAllReadingProgress();
+    broadcastAllReadingProgressCleared();
+    return true;
   });
 
   ipcMain.handle('get-book-tags', async (_event, filePath) => {
