@@ -187,7 +187,6 @@ button:hover {
 .detail-cover{
   width: 100%;
   aspect-ratio: 1269 / 1800;
-  border: none;
   background: linear-gradient(135deg, #2a2a2a, #3f3f3f);
   display: flex;
   align-items: center;
