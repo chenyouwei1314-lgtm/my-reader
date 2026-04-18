@@ -338,14 +338,15 @@ button:hover {
   display: flex;
   flex-wrap: nowrap;
   gap: 30px;
+  overflow-x: auto;
   overflow-y: hidden;
 }
 
 .recent-book-card {
   position: relative;
-  flex: 1 1 205px;
-  min-width: 205px;
-  max-width: 300px;
+  flex: 0 0 var(--recent-book-card-width, 200px);
+  width: var(--recent-book-card-width, 200px);
+  min-width: 120px;
   padding: 0 0 12px 0;
   border: none;
   border-radius: 15px;
@@ -402,7 +403,7 @@ button:hover {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  word-break: break-all;
+  word-wrap:break-word
 }
 
 .recent-book-card.favorite {

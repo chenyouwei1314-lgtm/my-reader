@@ -52,6 +52,8 @@ let books = [];
 let selectedBookId = null;
 let isFullscreen = false;
 let visibleCoverLoadTimer = null;
+let recentReadingResizeTimer = null;
+let bookGridResizeObserver = null;
 
 let appSettings = {
   displayLibraryName: '',
@@ -125,6 +127,43 @@ function clampNumber(value, min, max, fallback) {
   }
 
   return Math.min(max, Math.max(min, numberValue));
+}
+
+function getCurrentBookCardWidth() {
+  const firstBookCard = document.querySelector('.book-card');
+
+  if (firstBookCard) {
+    return firstBookCard.getBoundingClientRect().width;
+  }
+
+  // 如果還沒渲染出 book-card，就退回 grid 的最小寬
+  return 250;
+}
+
+function applyRecentBookCardWidth() {
+  const bookCardWidth = getCurrentBookCardWidth();
+  const recentCardWidth = Math.max(120, bookCardWidth * 0.8);
+
+  document.documentElement.style.setProperty(
+    '--recent-book-card-width',
+    `${recentCardWidth}px`
+  );
+}
+
+function setupRecentBookCardWidthSync() {
+  if (!bookGrid || typeof ResizeObserver === 'undefined') return;
+
+  if (bookGridResizeObserver) {
+    bookGridResizeObserver.disconnect();
+  }
+
+  bookGridResizeObserver = new ResizeObserver(() => {
+    requestAnimationFrame(() => {
+      applyRecentBookCardWidth();
+    });
+  });
+
+  bookGridResizeObserver.observe(bookGrid);
 }
 
 // ===== 書名排序工具 =====
@@ -362,7 +401,7 @@ async function getRecentReadingBooks() {
     return recentReadingPaths
       .map((filePath) => bookMap.get(filePath))
       .filter(Boolean)
-      .slice(0, 10);
+      .slice(0, 8);
   } catch (error) {
     console.error('讀取最近閱讀失敗:', error);
     return [];
@@ -370,20 +409,11 @@ async function getRecentReadingBooks() {
 }
 
 function getVisibleRecentBooks(recentBooks) {
-  if (!librarySection || !Array.isArray(recentBooks) || recentBooks.length === 0) {
+  if (!Array.isArray(recentBooks) || recentBooks.length === 0) {
     return [];
   }
 
-  const sectionWidth = librarySection.clientWidth || 0;
-  const minCardWidth = 205;
-  const gap = 30;
-
-  const visibleCount = Math.max(
-    1,
-    Math.floor((sectionWidth + gap) / (minCardWidth + gap))
-  );
-
-  return recentBooks.slice(0, visibleCount);
+  return recentBooks.slice(0, 8);
 }
 
 function getRecentReadingMarkup(recentBooks) {
@@ -482,6 +512,8 @@ async function renderRecentReadingSection() {
       loadCover(book, img, RECENT_COVER_WIDTH);
     }
   });
+
+  applyRecentBookCardWidth();
 }
 
 // ===== 封面工具：CBZ / PDF =====
@@ -1000,7 +1032,9 @@ async function renderBookGrid() {
   });
   
   renderDetailPanel();
+  applyRecentBookCardWidth();
   await renderRecentReadingSection();
+  applyRecentBookCardWidth();
 
   // 先優先載入 selected book 封面
   const selectedBook = getBookById(selectedBookId);
@@ -1374,12 +1408,26 @@ librarySection?.addEventListener('scroll', () => {
   }, 60);
 });
 
+window.addEventListener('resize', () => {
+  if (recentReadingResizeTimer) {
+    clearTimeout(recentReadingResizeTimer);
+  }
+
+  recentReadingResizeTimer = setTimeout(() => {
+    requestAnimationFrame(() => {
+      applyRecentBookCardWidth();
+    });
+  }, 60);
+});
+
 // ===== 初始化 =====
 async function initApp() {
   updateFullscreenButton();
   await loadAppSettings();
   await restoreLastLibrary();
   await applyPageBackground();
+  setupRecentBookCardWidthSync();
+  applyRecentBookCardWidth();
 }
 
 initApp();
