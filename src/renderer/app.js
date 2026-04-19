@@ -184,6 +184,16 @@ function setupRecentBookCardWidthSync() {
 }
 
 // ===== 書名排序工具 =====
+const zhStrokeCollator = new Intl.Collator('zh-Hant-u-co-stroke', {
+  numeric: true,
+  sensitivity: 'variant',
+});
+
+const jaCollator = new Intl.Collator('ja', {
+  numeric: true,
+  sensitivity: 'base',
+});
+
 function getFirstMeaningfulChar(text) {
   const value = (text || '').trim();
   if (!value) return '';
@@ -202,6 +212,12 @@ function getSymbolRank(char) {
 
   const index = symbolOrder.indexOf(char);
   return index === -1 ? 999 : index;
+}
+
+function normalizeTitleForCompare(text) {
+  return (text || '')
+    .trim()
+    .replace(/[\s\u3000]+/g, '');
 }
 
 function getTitleSortInfo(text) {
@@ -259,25 +275,68 @@ function getTitleSortInfo(text) {
   };
 }
 
-function compareBookTitle(a, b) {
-  const titleA = (a.title || '').trim();
-  const titleB = (b.title || '').trim();
+function compareSingleChar(charA, charB) {
+  if (charA === charB) {
+    return 0;
+  }
 
-  const infoA = getTitleSortInfo(titleA);
-  const infoB = getTitleSortInfo(titleB);
+  const infoA = getTitleSortInfo(charA);
+  const infoB = getTitleSortInfo(charB);
 
+  // 先維持你原本的群體優先順序
   if (infoA.group !== infoB.group) {
     return infoA.group - infoB.group;
   }
 
+  // 符號群：照你原本自訂順序
   if (infoA.group === 0 && infoA.symbolRank !== infoB.symbolRank) {
     return infoA.symbolRank - infoB.symbolRank;
   }
 
-  return infoA.normalized.localeCompare(infoB.normalized, 'ja', {
-    numeric: true,
-    sensitivity: 'base',
-  });
+  // 中文群：只比較這兩個中文字，使用筆劃排序
+  if (infoA.group === 4) {
+    return zhStrokeCollator.compare(charA, charB);
+  }
+
+  // 日文群：只比較這兩個字
+  if (infoA.group === 3) {
+    return jaCollator.compare(charA, charB);
+  }
+
+  // 數字 / 英文 / 其他：只比較這兩個字
+  return jaCollator.compare(charA, charB);
+}
+
+function compareBookTitle(a, b) {
+  const titleA = normalizeTitleForCompare(a.title);
+  const titleB = normalizeTitleForCompare(b.title);
+
+  const maxLength = Math.max(titleA.length, titleB.length);
+
+  for (let i = 0; i < maxLength; i += 1) {
+    const charA = titleA[i] || '';
+    const charB = titleB[i] || '';
+
+    if (charA === charB) {
+      continue;
+    }
+
+    if (!charA) {
+      return -1;
+    }
+
+    if (!charB) {
+      return 1;
+    }
+
+    const diff = compareSingleChar(charA, charB);
+
+    if (diff !== 0) {
+      return diff;
+    }
+  }
+
+  return 0;
 }
 
 function getBookSortWeight(book) {
