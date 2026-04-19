@@ -285,7 +285,7 @@ async function commitPageIndicatorInput() {
 
   await jumpToPage(nextPage, {
     updateIndicator: true,
-    animatePagedTurn: readerMode === 'paged',
+    animatePagedTurn: readerMode === 'paged' && pageFitMode === 'width',
     forceInstant: false,
     direction: nextPage > currentPage ? 1 : -1,
   });
@@ -1249,7 +1249,7 @@ async function nextPage(options = {}) {
 
   const changed = await jumpToPage(targetPage, {
     updateIndicator: true,
-    animatePagedTurn: readerMode === 'paged',
+    animatePagedTurn: readerMode === 'paged' && pageFitMode === 'width',
     forceInstant: false,
     direction: 1,
   });
@@ -1271,7 +1271,7 @@ async function prevPage(options = {}) {
 
   const changed = await jumpToPage(targetPage, {
     updateIndicator: true,
-    animatePagedTurn: readerMode === 'paged',
+    animatePagedTurn: readerMode === 'paged' && pageFitMode === 'width',
     forceInstant: false,
     direction: -1,
   });
