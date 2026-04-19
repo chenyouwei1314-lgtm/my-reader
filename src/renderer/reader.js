@@ -56,6 +56,7 @@ let pageObserver = null;
 
 let latestRenderToken = 0;
 let isFullscreen = false;
+let isFullscreenTransition = false;
 
 // 用來避免 mode / fit / resize 時，scroll 事件反過來干擾 currentPage
 let suppressScrollSync = false;
@@ -341,6 +342,31 @@ function clearPdfCache() {
 
 function clearCbzCache() {
   cbzBlobCache.clear();
+}
+
+async function waitForViewerSizeToStabilize(maxChecks = 12) {
+  let lastWidth = 0;
+  let lastHeight = 0;
+  let stableCount = 0;
+
+  for (let i = 0; i < maxChecks; i += 1) {
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+
+    const { width, height } = getViewerSize();
+
+    if (width === lastWidth && height === lastHeight) {
+      stableCount += 1;
+    } else {
+      stableCount = 0;
+      lastWidth = width;
+      lastHeight = height;
+    }
+
+    // 連續兩次一樣，視為穩定
+    if (stableCount >= 2) {
+      return;
+    }
+  }
 }
 
 // =========================================================
@@ -754,6 +780,14 @@ function applyCanvasDisplaySize(canvas, pixelWidth, pixelHeight) {
   canvas.style.maxHeight = 'none';
 }
 
+function updateVisibleCanvasDisplaySizes() {
+  const canvases = pdfPages.querySelectorAll('.pdf-canvas');
+
+  canvases.forEach((canvas) => {
+    applyCanvasDisplaySize(canvas, canvas.width, canvas.height);
+  });
+}
+
 function cloneCanvas(sourceCanvas) {
   const canvas = document.createElement('canvas');
   canvas.className = 'pdf-canvas';
@@ -1071,7 +1105,8 @@ async function renderDocumentStructure(anchorPage = currentPage) {
 // 跳頁 / 翻頁
 // =========================================================
 function setPagesVisibility(hidden) {
-  pdfPages.style.visibility = hidden ? 'hidden' : 'visible';
+  pdfPages.style.opacity = hidden ? '0' : '1';
+  pdfPages.style.pointerEvents = hidden ? 'none' : 'auto';
 }
 
 function createPagedTransitionLayer() {
@@ -1447,18 +1482,37 @@ async function handlePagedFitWidthBoundaryByScroll(delta) {
 // =========================================================
 async function toggleFullscreen() {
   if (!window.readerAPI?.toggleFullscreen) return;
+  if (isFullscreenTransition) return;
 
   try {
+    isFullscreenTransition = true;
+
+    const anchorPage = getCurrentAnchorPage();
+
+    suppressScrollSync = true;
+
     isFullscreen = await window.readerAPI.toggleFullscreen();
     document.body.classList.toggle('fullscreen-mode', isFullscreen);
     updateFullscreenButton();
 
-    const anchorPage = getCurrentAnchorPage();
-    clearPdfCache();
-    clearCbzCache();
-    await renderDocumentStructure(anchorPage);
+    await waitForViewerSizeToStabilize();
+    updateVisibleCanvasDisplaySizes();
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await jumpToPage(anchorPage, {
+      updateIndicator: true,
+      forceInstant: true,
+      animatePagedTurn: false,
+    });
+
+    requestAnimationFrame(() => {
+      suppressScrollSync = false;
+    });
   } catch (error) {
     console.error('切換全螢幕失敗:', error);
+  } finally {
+    setTimeout(() => {
+      isFullscreenTransition = false;
+    }, 120);
   }
 }
 
@@ -1788,21 +1842,51 @@ window.addEventListener('resize', () => {
 
   resizeTimer = setTimeout(async () => {
     if (isHandlingResize) return;
+    if (isFullscreenTransition) return;
     if (!totalPages) return;
 
     isHandlingResize = true;
 
     try {
       const anchorPage = getCurrentAnchorPage();
-      clearPdfCache();
-      clearCbzCache();
-      await renderDocumentStructure(anchorPage);
+
+      suppressScrollSync = true;
+
+      await waitForViewerSizeToStabilize();
+      updateVisibleCanvasDisplaySizes();
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+      // 若目前頁附近有尚未渲染頁，再補 render
+      const pagesToEnsure = new Set([
+        clampPage(anchorPage),
+        clampPage(anchorPage - 1),
+        clampPage(anchorPage + 1),
+      ]);
+
+      for (const pageNumber of pagesToEnsure) {
+        if (pageNumber < 1 || pageNumber > totalPages) continue;
+
+        if (!renderedPages.has(pageNumber)) {
+          await renderPage(pageNumber);
+        }
+      }
+
+      await jumpToPage(anchorPage, {
+        updateIndicator: true,
+        forceInstant: true,
+        animatePagedTurn: false,
+      });
+
+      requestAnimationFrame(() => {
+        suppressScrollSync = false;
+      });
     } catch (error) {
-      console.error('resize 重建失敗:', error);
+      console.error('resize 處理失敗:', error);
+      suppressScrollSync = false;
     } finally {
       isHandlingResize = false;
     }
-  }, 160);
+  }, 120);
 });
 
 window.addEventListener('beforeunload', () => {

@@ -51,6 +51,7 @@ body {
   padding: 0 20px;
   background: var(--theme-toolbar-bg);
   backdrop-filter: blur(10px);
+  transition: opacity 0.14s ease, background 0.14s ease;
 }
 
 .toolbar-left {
@@ -251,6 +252,7 @@ body {
   min-height: 100%;
   padding: 0;
   opacity: 1;
+  transition: opacity 0.12s ease;
 }
 
 .pdf-page-wrapper {
@@ -281,7 +283,6 @@ body {
 .pdf-page-wrapper .pdf-canvas {
   display: block;
   width: auto;
-  height: calc(100vh - var(--reader-toolbar-height));
   max-width: 100%;
   max-height: none;
   border-radius: 0;
@@ -313,7 +314,8 @@ body {
    ========================================================= */
 .fullscreen-mode .reader-toolbar,
 .fullscreen-mode #reader-title-bar {
-  display: none;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .fullscreen-mode #reader-shell {
@@ -333,9 +335,5 @@ body {
 
 .fullscreen-mode #reader-container.paged-fit-height .pdf-page-wrapper {
   min-height: 100vh;
-  height: 100vh;
-}
-
-.fullscreen-mode .pdf-page-wrapper .pdf-canvas {
   height: 100vh;
 }
