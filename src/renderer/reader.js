@@ -92,6 +92,11 @@ let pageIndicatorDraftValue = '';
 const pdfCanvasCache = new Map();
 const PDF_CACHE_LIMIT = 6;
 
+const PDF_DISPLAY_SCALE_Y = 1.0015;
+const PDF_CONTENT_SAMPLE_STEP = 2;
+const PDF_CONTENT_ALPHA_THRESHOLD = 12;
+const PDF_CONTENT_DIFF_THRESHOLD = 18;
+
 const cbzBlobCache = new Map();
 const CBZ_CACHE_LIMIT = 10;
 const CBZ_RENDER_SCALE_MULTIPLIER = 1;
@@ -780,11 +785,159 @@ function applyCanvasDisplaySize(canvas, pixelWidth, pixelHeight) {
   canvas.style.maxHeight = 'none';
 }
 
+function applyPdfDisplayFix(canvas) {
+  if (!canvas) return;
+
+  canvas.style.transform = `scaleY(${PDF_DISPLAY_SCALE_Y})`;
+  canvas.style.transformOrigin = 'top center';
+}
+
+function clearPdfDisplayFix(canvas) {
+  if (!canvas) return;
+
+  canvas.style.transform = '';
+  canvas.style.transformOrigin = '';
+}
+
+function getRgbDiffFromWhite(r, g, b) {
+  return 255 - ((r + g + b) / 3);
+}
+
+function isContentPixel(r, g, b, a) {
+  if (a <= PDF_CONTENT_ALPHA_THRESHOLD) {
+    return false;
+  }
+
+  return getRgbDiffFromWhite(r, g, b) >= PDF_CONTENT_DIFF_THRESHOLD;
+}
+
+function detectCanvasContentBounds(canvas) {
+  if (!canvas) return null;
+
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+
+  const width = canvas.width;
+  const height = canvas.height;
+
+  if (width <= 0 || height <= 0) return null;
+
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const data = imageData.data;
+  const step = Math.max(1, PDF_CONTENT_SAMPLE_STEP);
+
+  let top = -1;
+  let bottom = -1;
+  let left = width;
+  let right = -1;
+
+  for (let y = 0; y < height; y += step) {
+    let rowHasContent = false;
+
+    for (let x = 0; x < width; x += step) {
+      const index = (y * width + x) * 4;
+      const r = data[index];
+      const g = data[index + 1];
+      const b = data[index + 2];
+      const a = data[index + 3];
+
+      if (!isContentPixel(r, g, b, a)) continue;
+
+      rowHasContent = true;
+
+      if (top === -1) top = y;
+      bottom = y;
+      if (x < left) left = x;
+      if (x > right) right = x;
+    }
+
+    if (!rowHasContent) continue;
+  }
+
+  if (top === -1 || bottom === -1 || right === -1) {
+    return null;
+  }
+
+  // 再做一次較細的左右邊界補掃，讓 left/right 更準
+  for (let y = top; y <= bottom; y += step) {
+    for (let x = 0; x < width; x += 1) {
+      const index = (y * width + x) * 4;
+      const r = data[index];
+      const g = data[index + 1];
+      const b = data[index + 2];
+      const a = data[index + 3];
+
+      if (isContentPixel(r, g, b, a)) {
+        if (x < left) left = x;
+        break;
+      }
+    }
+
+    for (let x = width - 1; x >= 0; x -= 1) {
+      const index = (y * width + x) * 4;
+      const r = data[index];
+      const g = data[index + 1];
+      const b = data[index + 2];
+      const a = data[index + 3];
+
+      if (isContentPixel(r, g, b, a)) {
+        if (x > right) right = x;
+        break;
+      }
+    }
+  }
+
+  return {
+    top,
+    bottom,
+    left,
+    right,
+    width,
+    height,
+    topGap: top,
+    bottomGap: Math.max(0, height - 1 - bottom),
+    leftGap: left,
+    rightGap: Math.max(0, width - 1 - right),
+    contentWidth: Math.max(1, right - left + 1),
+    contentHeight: Math.max(1, bottom - top + 1),
+    contentWidthRatio: Math.max(1, right - left + 1) / width,
+    contentHeightRatio: Math.max(1, bottom - top + 1) / height,
+  };
+}
+
+function shouldApplyPdfBottomFix(bounds) {
+  if (!bounds) return false;
+
+  const {
+    bottomGap,
+    leftGap,
+    rightGap,
+    contentHeightRatio,
+  } = bounds;
+
+  return (
+    bottomGap >= 1 &&
+    bottomGap <= 2 &&
+    contentHeightRatio >= 0.88 &&
+    leftGap <= 6 &&
+    rightGap <= 6
+  );
+}
+
 function updateVisibleCanvasDisplaySizes() {
   const canvases = pdfPages.querySelectorAll('.pdf-canvas');
 
   canvases.forEach((canvas) => {
     applyCanvasDisplaySize(canvas, canvas.width, canvas.height);
+
+    if (
+      bookType === 'pdf' &&
+      canvas.dataset.pdfNeedsBottomFix === '1'
+    ) {
+      applyPdfDisplayFix(canvas);
+    } else {
+      clearPdfDisplayFix(canvas);
+    }
   });
 }
 
@@ -797,7 +950,17 @@ function cloneCanvas(sourceCanvas) {
   const ctx = canvas.getContext('2d');
   ctx.drawImage(sourceCanvas, 0, 0);
 
+  canvas.dataset.pdfNeedsBottomFix =
+    sourceCanvas.dataset.pdfNeedsBottomFix || '0';
+
   applyCanvasDisplaySize(canvas, canvas.width, canvas.height);
+
+  if (bookType === 'pdf' && canvas.dataset.pdfNeedsBottomFix === '1') {
+    applyPdfDisplayFix(canvas);
+  } else {
+    clearPdfDisplayFix(canvas);
+  }
+
   return canvas;
 }
 
@@ -828,38 +991,24 @@ async function buildPdfCanvas(pageNumber) {
       : null,
   }).promise;
 
-  // 保留你原本的微裁切習慣，只裁上方 1px
-  const cropTop = 1;
-  const cropRight = 0;
-  const cropBottom = 0;
-  const cropLeft = 0;
+  rawCanvas.className = 'pdf-canvas';
 
-  const finalWidth = rawCanvas.width - cropLeft - cropRight;
-  const finalHeight = rawCanvas.height - cropTop - cropBottom;
+  const contentBounds = detectCanvasContentBounds(rawCanvas);
+  const needsBottomFix = shouldApplyPdfBottomFix(contentBounds);
 
-  const finalCanvas = document.createElement('canvas');
-  finalCanvas.className = 'pdf-canvas';
-  finalCanvas.width = finalWidth;
-  finalCanvas.height = finalHeight;
+  rawCanvas.dataset.pdfNeedsBottomFix = needsBottomFix ? '1' : '0';
 
-  const finalContext = finalCanvas.getContext('2d');
-  finalContext.drawImage(
-    rawCanvas,
-    cropLeft,
-    cropTop,
-    finalWidth,
-    finalHeight,
-    0,
-    0,
-    finalWidth,
-    finalHeight
-  );
+  applyCanvasDisplaySize(rawCanvas, rawCanvas.width, rawCanvas.height);
 
-  applyCanvasDisplaySize(finalCanvas, finalWidth, finalHeight);
+  if (needsBottomFix) {
+    applyPdfDisplayFix(rawCanvas);
+  } else {
+    clearPdfDisplayFix(rawCanvas);
+  }
 
-  setMapWithLimit(pdfCanvasCache, cacheKey, finalCanvas, PDF_CACHE_LIMIT);
+  setMapWithLimit(pdfCanvasCache, cacheKey, rawCanvas, PDF_CACHE_LIMIT);
 
-  return cloneCanvas(finalCanvas);
+  return cloneCanvas(rawCanvas);
 }
 
 // =========================================================
