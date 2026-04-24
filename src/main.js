@@ -65,6 +65,10 @@ function normalizeBackgroundMode(value) {
     : 'none';
 }
 
+function normalizeContentReadingMode(value) {
+  return value === 'comic' ? 'comic' : 'document';
+}
+
 /**
  * 數值夾取工具
  */
@@ -240,6 +244,7 @@ function loadAppState() {
         backgroundImagePath: '',
         backgroundOpacity: 20,
         backgroundBlur: 0,
+        contentReadingMode: 'document',
       },
       recentReading: [],
     }
@@ -286,6 +291,9 @@ function loadAppState() {
             : '',
         backgroundOpacity: clampNumber(parsed.settings?.backgroundOpacity, 0, 100, 16),
         backgroundBlur: clampNumber(parsed.settings?.backgroundBlur, 0, 40, 2),
+        contentReadingMode: normalizeContentReadingMode(
+          parsed.settings?.contentReadingMode
+        ),
       },
     };
   } catch (error) {
@@ -308,6 +316,7 @@ function loadAppState() {
         backgroundImagePath: '',
         backgroundOpacity: 16,
         backgroundBlur: 2,
+        contentReadingMode: 'document',
       },
       recentReading: [],
     };
@@ -442,6 +451,9 @@ function getAppSettings() {
     backgroundImagePath: state.settings?.backgroundImagePath || '',
     backgroundOpacity: clampNumber(state.settings?.backgroundOpacity, 0, 100, 16),
     backgroundBlur: clampNumber(state.settings?.backgroundBlur, 0, 40, 2),
+    contentReadingMode: normalizeContentReadingMode(
+      state.settings?.contentReadingMode
+    ),
   };
 }
 
@@ -509,6 +521,9 @@ function saveAppSettings(settings = {}) {
       0,
       40,
       2
+    ),
+    contentReadingMode: normalizeContentReadingMode(
+      settings.contentReadingMode ?? state.settings?.contentReadingMode
     ),
   };
 

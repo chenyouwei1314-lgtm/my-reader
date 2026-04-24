@@ -33,6 +33,11 @@ const modeToggleBtn = document.getElementById('mode-toggle-btn');
 const autoplayBtn = document.getElementById('autoplay-btn');
 const pageIndicator = document.getElementById('page-indicator');
 const readerContainer = document.getElementById('reader-container');
+const copyPopover = document.createElement('button');
+copyPopover.className = 'pdf-copy-popover';
+copyPopover.type = 'button';
+copyPopover.textContent = 'Copy';
+document.body.appendChild(copyPopover);
 
 // =========================================================
 // 閱讀器狀態
@@ -42,6 +47,7 @@ let currentFilePath = '';
 
 let readerMode = 'paged'; // 'paged' | 'scroll'
 let pageFitMode = 'height'; // 'height' | 'width'
+let contentReadingMode = 'document'; // 'document' | 'comic'
 
 let currentPage = 1;
 let totalPages = 0;
@@ -130,6 +136,10 @@ function getQueryParams() {
       DEFAULT_THEME.accentColor
     ),
   };
+}
+
+function isSelectablePdfMode() {
+  return bookType === 'pdf' && contentReadingMode === 'document';
 }
 
 function showLoading(text) {
@@ -631,6 +641,11 @@ async function loadReaderSettings() {
       (Number(settings?.autoPlaySeconds) || 5) * 1000
     );
 
+    contentReadingMode =
+    settings?.contentReadingMode === 'comic'
+    ? 'comic'
+    : 'document';
+
     applyReaderTheme(document.documentElement, settings);
   } catch (error) {
     console.error('讀取閱讀器設定失敗:', error);
@@ -642,11 +657,30 @@ async function loadReaderSettings() {
   }
 }
 
-function applyNewSettings(settings) {
+async function applyNewSettings(settings) {
   const seconds = Math.max(1, Number(settings?.autoPlaySeconds) || 5);
   autoPlayIntervalMs = seconds * 1000;
 
+  const nextContentReadingMode =
+    settings?.contentReadingMode === 'comic'
+      ? 'comic'
+      : 'document';
+
+  const modeChanged = nextContentReadingMode !== contentReadingMode;
+  contentReadingMode = nextContentReadingMode;
+
   applyReaderTheme(document.documentElement, settings);
+
+  if (modeChanged && totalPages > 0) {
+    const anchorPage = getCurrentAnchorPage();
+
+    clearPdfCache();
+    clearCbzCache();
+    pdfTextMapByPage.clear();
+    clearCustomPdfSelection();
+
+    await renderDocumentStructure(anchorPage);
+  }
 
   if (isAutoPlaying) {
     stopAutoPlay();
@@ -763,6 +797,72 @@ function getPdfViewportByFit(page) {
       : viewerHeight / baseViewport.height;
 
   return page.getViewport({ scale });
+}
+
+async function buildPdfTextMap(page, viewport, pageNumber) {
+  const textContent = await page.getTextContent({
+    disableCombineTextItems: true,
+  });
+
+  const chars = [];
+  let lineId = -1;
+  let lastY = null;
+  let indexInLine = 0;
+
+  textContent.items.forEach((item) => {
+    const text = item.str || '';
+    if (!text) return;
+
+    const transform = pdfjsLib.Util.transform(
+      viewport.transform,
+      item.transform
+    );
+
+    const x = transform[4];
+    const baselineY = transform[5];
+
+    const fontHeight = Math.max(
+      4,
+      Math.hypot(transform[2], transform[3])
+    );
+
+    const itemWidth = Math.max(
+      1,
+      (item.width || text.length * fontHeight * 0.5) * viewport.scale
+    );
+
+    const y = baselineY - fontHeight;
+    const normalizedY = Math.round(y / 4) * 4;
+
+    if (lastY === null || Math.abs(normalizedY - lastY) > fontHeight * 0.8) {
+      lineId += 1;
+      indexInLine = 0;
+      lastY = normalizedY;
+    }
+
+    const visibleChars = [...text];
+    const charWidth = itemWidth / Math.max(visibleChars.length, 1);
+
+    visibleChars.forEach((char, charIndex) => {
+      const left = x + charIndex * charWidth;
+      const right = left + charWidth;
+
+      chars.push({
+  char,
+  left,
+  right,
+  top: y,
+  bottom: y + fontHeight,
+  lineId,
+  indexInLine,
+  globalIndex: chars.length,
+});
+
+      indexInLine += 1;
+    });
+  });
+
+  pdfTextMapByPage.set(pageNumber, chars);
 }
 
 function applyCanvasDisplaySize(canvas, pixelWidth, pixelHeight) {
@@ -1011,6 +1111,293 @@ async function buildPdfCanvas(pageNumber) {
   return cloneCanvas(rawCanvas);
 }
 
+async function buildSelectablePdfPage(pageNumber) {
+  const page = await pdfDoc.getPage(pageNumber);
+  const viewport = getPdfViewportByFit(page);
+
+  const outputScale = Math.min((window.devicePixelRatio || 1) * 1.2, 2.5);
+
+  const pageLayer = document.createElement('div');
+  pageLayer.className = 'pdf-selectable-layer';
+  pageLayer.dataset.pageNumber = String(pageNumber);
+  pageLayer.style.width = `${viewport.width}px`;
+  pageLayer.style.height = `${viewport.height}px`;
+
+  const canvas = document.createElement('canvas');
+  canvas.className = 'pdf-canvas';
+  canvas.width = Math.round(viewport.width * outputScale);
+  canvas.height = Math.round(viewport.height * outputScale);
+  canvas.style.width = `${viewport.width}px`;
+  canvas.style.height = `${viewport.height}px`;
+
+  const ctx = canvas.getContext('2d');
+
+  await page.render({
+    canvasContext: ctx,
+    viewport,
+    transform:
+      outputScale !== 1
+        ? [outputScale, 0, 0, outputScale, 0, 0]
+        : null,
+  }).promise;
+
+  await buildPdfTextMap(page, viewport, pageNumber);
+
+  const selectionLayer = document.createElement('div');
+  selectionLayer.className = 'pdf-selection-layer';
+
+  pageLayer.appendChild(canvas);
+  pageLayer.appendChild(selectionLayer);
+
+  pageLayer.addEventListener('mousedown', (event) => {
+    if (event.button !== 0) return;
+
+    event.preventDefault();
+
+    clearCustomPdfSelection();
+
+    pageLayer.classList.add('selecting');
+
+    customPdfSelection.active = true;
+    customPdfSelection.pageNumber = pageNumber;
+    customPdfSelection.start = getPointInPageLayer(event, pageLayer);
+    customPdfSelection.end = customPdfSelection.start;
+    customPdfSelection.chars = [];
+  });
+
+  pageLayer.addEventListener('mousemove', (event) => {
+    updateCustomPdfSelection(event);
+  });
+
+  pageLayer.addEventListener('mouseup', () => {
+    customPdfSelection.active = false;
+    pageLayer.classList.remove('selecting');
+  });
+
+  pageLayer.addEventListener('mouseleave', () => {
+    if (!customPdfSelection.active) return;
+
+    customPdfSelection.active = false;
+    pageLayer.classList.remove('selecting');
+  });
+
+  return pageLayer;
+}
+
+let customPdfSelection = {
+  active: false,
+  pageNumber: 0,
+  start: null,
+  end: null,
+  chars: [],
+};
+
+const pdfTextMapByPage = new Map();
+
+function clearCustomPdfSelection() {
+  customPdfSelection = {
+    active: false,
+    pageNumber: 0,
+    start: null,
+    end: null,
+    chars: [],
+  };
+
+  pdfPages
+    .querySelectorAll('.pdf-selection-rect')
+    .forEach((rect) => rect.remove());
+
+  hideCopyPopover();
+}
+
+function getPointInPageLayer(event, pageLayer) {
+  const rect = pageLayer.getBoundingClientRect();
+
+  return {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top,
+  };
+}
+
+function normalizeSelectionBox(start, end) {
+  return {
+    left: Math.min(start.x, end.x),
+    right: Math.max(start.x, end.x),
+    top: Math.min(start.y, end.y),
+    bottom: Math.max(start.y, end.y),
+  };
+}
+
+function charIntersectsBox(charBox, box) {
+  return !(
+    charBox.right < box.left ||
+    charBox.left > box.right ||
+    charBox.bottom < box.top ||
+    charBox.top > box.bottom
+  );
+}
+
+function drawCustomPdfSelection(pageLayer, selectedChars) {
+  const selectionLayer = pageLayer.querySelector('.pdf-selection-layer');
+  if (!selectionLayer) return;
+
+  selectionLayer.innerHTML = '';
+
+  const lineGroups = new Map();
+
+  selectedChars.forEach((charBox) => {
+    const key = charBox.lineId;
+
+    if (!lineGroups.has(key)) {
+      lineGroups.set(key, {
+        left: charBox.left,
+        right: charBox.right,
+        top: charBox.top,
+        bottom: charBox.bottom,
+      });
+      return;
+    }
+
+    const group = lineGroups.get(key);
+    group.left = Math.min(group.left, charBox.left);
+    group.right = Math.max(group.right, charBox.right);
+    group.top = Math.min(group.top, charBox.top);
+    group.bottom = Math.max(group.bottom, charBox.bottom);
+  });
+
+  lineGroups.forEach((group) => {
+    const rect = document.createElement('div');
+    rect.className = 'pdf-selection-rect';
+
+    rect.style.left = `${group.left}px`;
+    rect.style.top = `${group.top}px`;
+    rect.style.width = `${group.right - group.left}px`;
+    rect.style.height = `${group.bottom - group.top}px`;
+
+    selectionLayer.appendChild(rect);
+  });
+}
+
+function findNearestCharIndex(chars, point) {
+  if (!chars || chars.length === 0) return -1;
+
+  let bestIndex = -1;
+  let bestDistance = Infinity;
+
+  chars.forEach((charBox) => {
+    const centerX = (charBox.left + charBox.right) / 2;
+    const centerY = (charBox.top + charBox.bottom) / 2;
+
+    const dx = centerX - point.x;
+    const dy = centerY - point.y;
+    const distance = dx * dx + dy * dy * 6;
+
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = charBox.globalIndex;
+    }
+  });
+
+  return bestIndex;
+}
+
+function updateCustomPdfSelection(event) {
+  if (!customPdfSelection.active) return;
+
+  const pageLayer = event.target.closest?.('.pdf-selectable-layer');
+  if (!pageLayer) return;
+
+  const pageNumber = Number(pageLayer.dataset.pageNumber) || 0;
+  if (pageNumber !== customPdfSelection.pageNumber) return;
+
+  const end = getPointInPageLayer(event, pageLayer);
+  customPdfSelection.end = end;
+
+  const chars = pdfTextMapByPage.get(pageNumber) || [];
+
+const startIndex = findNearestCharIndex(chars, customPdfSelection.start);
+const endIndex = findNearestCharIndex(chars, end);
+
+if (startIndex < 0 || endIndex < 0) return;
+
+const fromIndex = Math.min(startIndex, endIndex);
+const toIndex = Math.max(startIndex, endIndex);
+
+const selectedChars = chars.filter((charBox) =>
+  charBox.globalIndex >= fromIndex &&
+  charBox.globalIndex <= toIndex
+);
+
+  customPdfSelection.chars = selectedChars;
+  drawCustomPdfSelection(pageLayer, selectedChars);
+  showCopyPopoverNearSelection(pageLayer, selectedChars);
+}
+
+function getSelectedPdfText() {
+  const chars = customPdfSelection.chars || [];
+  if (chars.length === 0) return '';
+
+  const sorted = [...chars].sort((a, b) => {
+    if (a.lineId !== b.lineId) return a.lineId - b.lineId;
+    return a.indexInLine - b.indexInLine;
+  });
+
+  let text = '';
+  let lastLineId = sorted[0]?.lineId ?? 0;
+
+  sorted.forEach((charBox, index) => {
+    if (index > 0 && charBox.lineId !== lastLineId) {
+      text += '\n';
+      lastLineId = charBox.lineId;
+    }
+
+    text += charBox.char;
+  });
+
+  return text;
+}
+
+async function copyCustomPdfSelection() {
+  const text = getSelectedPdfText();
+  if (!text) return;
+
+  await navigator.clipboard.writeText(text);
+}
+
+function hideCopyPopover() {
+  copyPopover.classList.remove('show', 'copied');
+}
+
+function showCopyPopoverNearSelection(pageLayer, selectedChars) {
+  if (!pageLayer || !selectedChars || selectedChars.length === 0) {
+    hideCopyPopover();
+    return;
+  }
+
+  const firstChar = selectedChars[0];
+  const pageRect = pageLayer.getBoundingClientRect();
+
+  const x = pageRect.left + firstChar.left;
+  const y = pageRect.top + firstChar.top;
+
+  copyPopover.textContent = 'Copy';
+  copyPopover.classList.remove('copied');
+  copyPopover.style.left = `${Math.max(12, x)}px`;
+  copyPopover.style.top = `${Math.max(12, y - 42)}px`;
+  copyPopover.classList.add('show');
+}
+
+async function copyFromPopover() {
+  await copyCustomPdfSelection();
+
+  copyPopover.textContent = 'Copied';
+  copyPopover.classList.add('copied');
+
+  setTimeout(() => {
+    hideCopyPopover();
+  }, 700);
+}
+
 // =========================================================
 // CBZ 工具
 // =========================================================
@@ -1159,20 +1546,22 @@ async function renderPage(pageNumber) {
   renderedPages.add(pageNumber);
 
   try {
-    let canvas = null;
+    let pageElement = null;
 
-    if (bookType === 'pdf') {
-      canvas = await buildPdfCanvas(pageNumber);
-    } else {
-      canvas = await buildCbzCanvas(pageNumber);
-    }
+if (bookType === 'pdf' && contentReadingMode === 'document') {
+  pageElement = await buildSelectablePdfPage(pageNumber);
+} else if (bookType === 'pdf') {
+  pageElement = await buildPdfCanvas(pageNumber);
+} else {
+  pageElement = await buildCbzCanvas(pageNumber);
+}
 
     const placeholder = wrapper.querySelector('.pdf-page-placeholder');
     if (placeholder) {
       placeholder.remove();
     }
 
-    wrapper.appendChild(canvas);
+    wrapper.appendChild(pageElement);
   } catch (error) {
     console.error(`第 ${pageNumber} 頁渲染失敗:`, error);
 
@@ -1645,13 +2034,21 @@ async function toggleFullscreen() {
     updateFullscreenButton();
 
     await waitForViewerSizeToStabilize();
-    updateVisibleCanvasDisplaySizes();
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-    await jumpToPage(anchorPage, {
-      updateIndicator: true,
-      forceInstant: true,
-      animatePagedTurn: false,
-    });
+
+if (isSelectablePdfMode()) {
+  clearPdfCache();
+  pdfTextMapByPage.clear();
+  clearCustomPdfSelection();
+  await renderDocumentStructure(anchorPage);
+} else {
+  updateVisibleCanvasDisplaySizes();
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await jumpToPage(anchorPage, {
+    updateIndicator: true,
+    forceInstant: true,
+    animatePagedTurn: false,
+  });
+}
 
     requestAnimationFrame(() => {
       suppressScrollSync = false;
@@ -1751,8 +2148,8 @@ async function initReader() {
 // 事件
 // =========================================================
 if (window.readerAPI?.onAppSettingsUpdated) {
-  window.readerAPI.onAppSettingsUpdated((settings) => {
-    applyNewSettings(settings);
+  window.readerAPI.onAppSettingsUpdated(async (settings) => {
+    await applyNewSettings(settings);
   });
 }
 
@@ -1764,6 +2161,18 @@ if (window.readerAPI?.onBookTagsUpdated) {
     updateFavoriteButton();
   });
 }
+
+copyPopover.addEventListener('click', async (event) => {
+  event.stopPropagation();
+  await copyFromPopover();
+});
+
+document.addEventListener('mousedown', (event) => {
+  if (event.target.closest?.('.pdf-copy-popover')) return;
+  if (event.target.closest?.('.pdf-selectable-layer')) return;
+
+  clearCustomPdfSelection();
+});
 
 backBtn?.addEventListener('click', async () => {
   try {
@@ -1832,6 +2241,20 @@ pageIndicator?.addEventListener('blur', async () => {
 });
 
 document.addEventListener('keydown', async (event) => {
+  if (
+  event.ctrlKey &&
+  event.key.toLowerCase() === 'c' &&
+  contentReadingMode === 'document'
+) {
+  const selectedText = getSelectedPdfText();
+
+  if (selectedText) {
+    event.preventDefault();
+    await copyCustomPdfSelection();
+    return;
+  }
+}
+
   if (isPageIndicatorEditing) return;
 
   if (event.key === 'Escape' && isFullscreen) {
@@ -2002,8 +2425,17 @@ window.addEventListener('resize', () => {
       suppressScrollSync = true;
 
       await waitForViewerSizeToStabilize();
-      updateVisibleCanvasDisplaySizes();
-      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+if (isSelectablePdfMode()) {
+  clearPdfCache();
+  pdfTextMapByPage.clear();
+  clearCustomPdfSelection();
+  await renderDocumentStructure(anchorPage);
+  return;
+}
+
+updateVisibleCanvasDisplaySizes();
+await new Promise((resolve) => requestAnimationFrame(resolve));
 
       // 若目前頁附近有尚未渲染頁，再補 render
       const pagesToEnsure = new Set([

@@ -289,6 +289,61 @@ body {
   background: #fff;
 }
 
+.pdf-selectable-layer {
+  position: relative;
+  flex: 0 0 auto;
+  background: #fff;
+  line-height: normal;
+}
+
+.pdf-selectable-layer .pdf-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.pdf-selection-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.pdf-selection-rect {
+  position: absolute;
+  background: rgba(70, 110, 255, 0.32);
+  pointer-events: none;
+}
+
+.pdf-selectable-layer.selecting {
+  cursor: text;
+}
+
+.pdf-copy-popover {
+  position: fixed;
+  z-index: 2000;
+  display: none;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(24, 24, 24, 0.96);
+  color: var(--theme-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.pdf-copy-popover.show {
+  display: block;
+}
+
+.pdf-copy-popover.copied {
+  background: rgba(60, 60, 60, 0.96);
+}
+
 /* fit width 時，讓內容寬度貼齊容器，實際高度由 JS 決定 */
 #reader-container.paged-fit-width .pdf-page-wrapper .pdf-canvas,
 #reader-container.scroll-mode .pdf-page-wrapper .pdf-canvas {

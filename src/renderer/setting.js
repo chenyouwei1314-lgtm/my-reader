@@ -66,6 +66,7 @@ let settings = {
   backgroundImagePath: '',
   backgroundOpacity: 16,
   backgroundBlur: 2,
+  contentReadingMode: 'document',
 };
 
 // ===== 個人主題暫存狀態 =====
@@ -1137,8 +1138,37 @@ function renderHistorySection() {
  * 渲染「閱讀功能細項」區塊
  */
 function renderAutoplaySection() {
+  const currentContentReadingMode =
+    settings.contentReadingMode === 'document'
+      ? 'document'
+      : 'comic';
+
   settingsContent.innerHTML = `
     <h1 class="settings-section-title">閱讀功能細項</h1>
+
+    <div class="settings-group">
+      <div class="settings-label">閱讀模式選擇</div>
+
+      <div class="settings-check-list" id="content-reading-mode-options">
+        <button class="settings-check-option" data-content-reading-mode="document" type="button">
+          <span class="settings-checkbox ${currentContentReadingMode === 'document' ? 'checked' : ''}">
+            ${currentContentReadingMode === 'document' ? '✓' : ''}
+          </span>
+          <span>文件模式</span>
+        </button>
+
+        <button class="settings-check-option" data-content-reading-mode="comic" type="button">
+          <span class="settings-checkbox ${currentContentReadingMode === 'comic' ? 'checked' : ''}">
+            ${currentContentReadingMode === 'comic' ? '✓' : ''}
+          </span>
+          <span>漫畫模式</span>
+        </button>
+      </div>
+
+      <div class="settings-hint">
+        文件模式可選取 PDF 文字；漫畫模式僅顯示頁面影像，適合漫畫與掃描檔
+      </div>
+    </div>
 
     <div class="settings-group">
       <div class="settings-label">循環播放間隔</div>
@@ -1156,6 +1186,19 @@ function renderAutoplaySection() {
       <div class="settings-hint">設定循環播放，切換至下一頁的間隔秒數</div>
     </div>
   `;
+
+  document.getElementById('content-reading-mode-options')?.addEventListener('click', async (event) => {
+    const option = event.target.closest('[data-content-reading-mode]');
+    if (!option) return;
+
+    settings.contentReadingMode =
+      option.dataset.contentReadingMode === 'document'
+        ? 'document'
+        : 'comic';
+
+    settings = await window.readerAPI.saveAppSettings(settings);
+    renderAutoplaySection();
+  });
 
   document.getElementById('autoplay-seconds-input')?.addEventListener('input', async (event) => {
     const value = Math.max(1, Number(event.target.value) || 1);
@@ -1256,6 +1299,10 @@ async function loadInitialState() {
     backgroundImagePath: appSettings?.backgroundImagePath || '',
     backgroundOpacity: clampNumber(appSettings?.backgroundOpacity, 0, 100, 16),
     backgroundBlur: clampNumber(appSettings?.backgroundBlur, 0, 40, 2),
+    contentReadingMode:
+    appSettings?.contentReadingMode === 'comic'
+    ? 'comic'
+    : 'document',
   };
 
   appearanceCustomHistory = [...settings.customColorHistory];
