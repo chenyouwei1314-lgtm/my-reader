@@ -1204,7 +1204,7 @@ const DOWN_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" 
             ${settings.pageClickCommand.includes('cornerNextPrev') ? '✓' : ''}
           </span>
           ${CLICK_NEXT_ICON}
-          <span>下一頁 /</span>
+          <span>下一頁</span>
           ${CLICK_PREV_ICON}
           <span>上一頁</span>
         </button>
@@ -1214,7 +1214,7 @@ const DOWN_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" 
             ${settings.pageClickCommand.includes('leftNextRightPrev') ? '✓' : ''}
           </span>
           ${LEFT_ICON}
-          <span>下一頁 /</span>
+          <span>下一頁</span>
           ${RIGHT_ICON}
           <span>上一頁</span>
         </button>
@@ -1224,7 +1224,7 @@ const DOWN_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" 
             ${settings.pageClickCommand.includes('leftPrevRightNext') ? '✓' : ''}
           </span>
           ${LEFT_ICON}
-          <span>上一頁 /</span>
+          <span>上一頁</span>
           ${RIGHT_ICON}
           <span>下一頁</span>
         </button>
@@ -1234,7 +1234,7 @@ const DOWN_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" 
             ${settings.pageClickCommand.includes('upPrevDownNext') ? '✓' : ''}
           </span>
           ${UP_ICON}
-          <span>上一頁 /</span>
+          <span>上一頁</span>
           ${DOWN_ICON}
           <span>下一頁</span>
         </button>
@@ -1258,7 +1258,7 @@ const DOWN_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" 
             ${settings.scrollHoldCommand.includes('horizontalScroll') ? '✓' : ''}
           </span>
           ${CLICK_NEXT_ICON}
-          <span>向下捲動 /</span>
+          <span>向下捲動</span>
           ${CLICK_PREV_ICON}
           <span>向上捲動</span>  
         </button>
@@ -1268,7 +1268,7 @@ const DOWN_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" 
             ${settings.scrollHoldCommand.includes('verticalScroll') ? '✓' : ''}
           </span>
           ${UP_ICON}
-          <span>向上捲動 /</span>
+          <span>向上捲動</span>
           ${DOWN_ICON}
           <span>向下捲動</span>
         </button>
