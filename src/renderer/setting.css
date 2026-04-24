@@ -286,7 +286,9 @@ button:hover {
   font-size: 14px;
 }
 
-/* 共用寬度與列排版 */
+/* =========================================================
+   Shared Setting Blocks
+   ========================================================= */
 .settings-block {
   width: min(100%, var(--settings-control-width));
 }
@@ -303,7 +305,9 @@ button:hover {
   min-width: 0;
 }
 
-/* 共用控制元件 */
+/* =========================================================
+   Shared Controls
+   ========================================================= */
 .settings-control,
 #pick-folder-btn,
 #pick-background-image-btn,
@@ -375,7 +379,7 @@ button:hover {
 }
 
 .settings-value-button:disabled {
-  opacity: 0.55;
+  opacity: 0.45;
   cursor: default;
 }
 
@@ -422,6 +426,20 @@ button:hover {
 
 .settings-check-option:hover {
   opacity: 0.9;
+}
+
+.settings-check-option.disabled,
+.settings-check-option:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  color: var(--theme-muted-text);
+}
+
+.settings-check-option.disabled .settings-checkbox,
+.settings-check-option:disabled .settings-checkbox,
+.settings-check-option.disabled:hover,
+.settings-check-option:disabled:hover {
+  opacity: 0.45;
 }
 
 .settings-checkbox {
@@ -634,6 +652,14 @@ button:hover {
   min-width: 0;
 }
 
+.background-range-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
 /* =========================================================
    Range Slider
    ========================================================= */
@@ -679,14 +705,6 @@ input[type="range"],
 input[type="range"]::-webkit-slider-thumb,
 input[type="range"]::-moz-range-thumb {
   cursor: pointer;
-}
-
-.background-range-wrap {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
 }
 
 .range-value-tooltip {
@@ -782,4 +800,24 @@ input[type="range"]::-moz-range-thumb {
   display: none;
   width: 0;
   height: 0;
+}
+
+/* =========================================================
+   Reading Command Options
+   ========================================================= */
+.command-option-list {
+  gap: 10px;
+}
+
+.command-option {
+  min-height: 20px;
+  height: auto;
+  flex-wrap: wrap;
+}
+
+.command-icon {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+  flex: 0 0 auto;
 }

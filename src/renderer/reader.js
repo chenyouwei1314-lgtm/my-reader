@@ -38,6 +38,8 @@ copyPopover.className = 'pdf-copy-popover';
 copyPopover.type = 'button';
 copyPopover.textContent = 'Copy';
 document.body.appendChild(copyPopover);
+const HOLD_SCROLL_STEP = 28;
+const KEY_SCROLL_STEP = 28;
 
 // =========================================================
 // 閱讀器狀態
@@ -48,6 +50,10 @@ let currentFilePath = '';
 let readerMode = 'paged'; // 'paged' | 'scroll'
 let pageFitMode = 'height'; // 'height' | 'width'
 let contentReadingMode = 'document'; // 'document' | 'comic'
+let pageClickCommand = [];
+let scrollHoldCommand = [];
+let holdScrollTimer = null;
+let holdScrollDirection = 0;
 
 let currentPage = 1;
 let totalPages = 0;
@@ -91,6 +97,9 @@ let autoPlayIntervalMs = 5000;
 let currentBookTags = {};
 let isPageIndicatorEditing = false;
 let pageIndicatorDraftValue = '';
+
+let pointerDownInfo = null;
+let keyHoldTimer = null;
 
 // =========================================================
 // 簡單記憶體快取
@@ -384,6 +393,48 @@ async function waitForViewerSizeToStabilize(maxChecks = 12) {
   }
 }
 
+function recordPointerDown(event) {
+  pointerDownInfo = {
+    button: event.button,
+    x: event.clientX,
+    y: event.clientY,
+    time: Date.now(),
+  };
+}
+
+function isValidClickRelease(event) {
+  if (!pointerDownInfo) return false;
+  if (pointerDownInfo.button !== event.button) return false;
+
+  const dx = Math.abs(event.clientX - pointerDownInfo.x);
+  const dy = Math.abs(event.clientY - pointerDownInfo.y);
+  const dt = Date.now() - pointerDownInfo.time;
+
+  return dx <= 6 && dy <= 6 && dt <= 350;
+}
+
+function stopKeyHoldPageTurn() {
+  clearInterval(keyHoldTimer);
+  keyHoldTimer = null;
+}
+
+function startKeyHoldPageTurn(direction) {
+  if (readerMode !== 'paged') return;
+  if (keyHoldTimer) return;
+
+  const turn = async () => {
+    if (direction > 0) {
+      await nextPage();
+    } else {
+      await prevPage();
+    }
+  };
+
+  turn();
+
+  keyHoldTimer = setInterval(turn, 180);
+}
+
 // =========================================================
 // 我的最愛
 // =========================================================
@@ -646,6 +697,14 @@ async function loadReaderSettings() {
     ? 'comic'
     : 'document';
 
+    pageClickCommand = Array.isArray(settings?.pageClickCommand)
+  ? settings.pageClickCommand
+  : [];
+
+scrollHoldCommand = Array.isArray(settings?.scrollHoldCommand)
+  ? settings.scrollHoldCommand
+  : [];
+
     applyReaderTheme(document.documentElement, settings);
   } catch (error) {
     console.error('讀取閱讀器設定失敗:', error);
@@ -668,6 +727,13 @@ async function applyNewSettings(settings) {
 
   const modeChanged = nextContentReadingMode !== contentReadingMode;
   contentReadingMode = nextContentReadingMode;
+  pageClickCommand = Array.isArray(settings?.pageClickCommand)
+  ? settings.pageClickCommand
+  : [];
+
+scrollHoldCommand = Array.isArray(settings?.scrollHoldCommand)
+  ? settings.scrollHoldCommand
+  : [];
 
   applyReaderTheme(document.documentElement, settings);
 
@@ -2144,6 +2210,104 @@ async function initReader() {
   }
 }
 
+function stopHoldScroll() {
+  clearInterval(holdScrollTimer);
+  holdScrollTimer = null;
+  holdScrollDirection = 0;
+}
+
+function startHoldScroll(direction) {
+  if (readerMode !== 'scroll') return;
+  if (!Array.isArray(scrollHoldCommand) || scrollHoldCommand.length === 0) return;
+
+  stopHoldScroll();
+
+  holdScrollDirection = direction;
+
+  holdScrollTimer = setInterval(() => {
+    readerContainer.scrollBy({
+      top: holdScrollDirection * HOLD_SCROLL_STEP,
+      behavior: 'auto',
+    });
+  }, 16);
+}
+
+async function handleReaderClickCommand(event) {
+  if (readerMode !== 'paged') return;
+  if (!Array.isArray(pageClickCommand) || pageClickCommand.length === 0) return;
+  if (event.target.closest?.('.reader-toolbar')) return;
+  if (event.target.closest?.('.pdf-copy-popover')) return;
+
+  const hasMouseButtonCommand = pageClickCommand.includes('cornerNextPrev');
+  if (!hasMouseButtonCommand) return;
+
+  const rect = readerContainer.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+
+  const isLeft = x < rect.width / 2;
+  const isRight = !isLeft;
+  const isUp = y < rect.height / 2;
+  const isDown = !isUp;
+
+  if (pageClickCommand.includes('cornerNextPrev')) {
+  if (contentReadingMode === 'document') return;
+
+  if (event.button === 0) {
+    await nextPage();
+    return;
+  }
+
+  if (event.button === 2) {
+    await prevPage();
+    return;
+  }
+}
+
+if (event.button !== 0) return;
+
+if (pageClickCommand.includes('leftNextRightPrev')) {
+  if (isLeft) await nextPage();
+  else await prevPage();
+  return;
+}
+
+if (pageClickCommand.includes('leftPrevRightNext')) {
+  if (isLeft) await prevPage();
+  else await nextPage();
+  return;
+}
+
+if (pageClickCommand.includes('upPrevDownNext')) {
+  if (isUp) await prevPage();
+  else await nextPage();
+}
+}
+
+function handleReaderHoldCommandStart(event) {
+  if (readerMode !== 'scroll') return;
+  if (!Array.isArray(scrollHoldCommand) || scrollHoldCommand.length === 0) return;
+  if (event.target.closest?.('.reader-toolbar')) return;
+  if (event.target.closest?.('.pdf-copy-popover')) return;
+  if (event.target.closest?.('.pdf-selectable-layer')) return;
+
+  const rect = readerContainer.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+
+  if (scrollHoldCommand.includes('horizontalScroll')) {
+  if (event.button === 0) startHoldScroll(1);
+  if (event.button === 2) startHoldScroll(-1);
+  return;
+}
+
+if (event.button !== 0) return;
+
+if (scrollHoldCommand.includes('verticalScroll')) {
+  startHoldScroll(y < rect.height / 2 ? -1 : 1);
+}
+}
+
 // =========================================================
 // 事件
 // =========================================================
@@ -2161,6 +2325,16 @@ if (window.readerAPI?.onBookTagsUpdated) {
     updateFavoriteButton();
   });
 }
+
+readerContainer.addEventListener('contextmenu', (event) => {
+  if (
+    readerMode === 'scroll' &&
+    Array.isArray(scrollHoldCommand) &&
+    scrollHoldCommand.includes('horizontalScroll')
+  ) {
+    event.preventDefault();
+  }
+});
 
 copyPopover.addEventListener('click', async (event) => {
   event.stopPropagation();
@@ -2262,18 +2436,68 @@ document.addEventListener('keydown', async (event) => {
     return;
   }
 
-  // PageDown / PageUp / 左右鍵，在 paged mode 都保留翻頁感
-  if (readerMode !== 'paged') return;
+if (event.key === 'ArrowDown') {
+  event.preventDefault();
 
-  if (event.key === 'ArrowRight' || event.key === 'PageDown') {
-    event.preventDefault();
-    await nextPage();
+  if (readerMode === 'paged') {
+    startKeyHoldPageTurn(1);
+  } else {
+    readerContainer.scrollBy({ top: KEY_SCROLL_STEP, behavior: 'auto' });
   }
 
-  if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
-    event.preventDefault();
-    await prevPage();
+  return;
+}
+
+if (event.key === 'ArrowUp') {
+  event.preventDefault();
+
+  if (readerMode === 'paged') {
+    startKeyHoldPageTurn(-1);
+  } else {
+    readerContainer.scrollBy({ top: -KEY_SCROLL_STEP, behavior: 'auto' });
   }
+
+  return;
+}
+
+if (event.key === 'ArrowRight' || event.key === 'PageDown') {
+  event.preventDefault();
+
+  if (readerMode === 'paged') {
+    startKeyHoldPageTurn(1);
+  } else {
+    readerContainer.scrollBy({ top: readerContainer.clientHeight * 0.85, behavior: 'auto' });
+  }
+
+  return;
+}
+
+if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
+  event.preventDefault();
+
+  if (readerMode === 'paged') {
+    startKeyHoldPageTurn(-1);
+  } else {
+    readerContainer.scrollBy({ top: -readerContainer.clientHeight * 0.85, behavior: 'auto' });
+  }
+}
+});
+
+document.addEventListener('keyup', (event) => {
+  if (
+    event.key === 'ArrowRight' ||
+    event.key === 'ArrowLeft' ||
+    event.key === 'ArrowUp' ||
+    event.key === 'ArrowDown' ||
+    event.key === 'PageDown' ||
+    event.key === 'PageUp'
+  ) {
+    stopKeyHoldPageTurn();
+  }
+});
+
+window.addEventListener('blur', () => {
+  stopKeyHoldPageTurn();
 });
 
 window.addEventListener(
@@ -2398,6 +2622,27 @@ readerContainer.addEventListener('scroll', async () => {
     currentPage = nextCurrentPage;
     updatePageIndicator();
   }
+});
+
+readerContainer.addEventListener('mousedown', (event) => {
+  recordPointerDown(event);
+  handleReaderHoldCommandStart(event);
+});
+
+readerContainer.addEventListener('mouseup', async (event) => {
+  stopHoldScroll();
+
+  if (!isValidClickRelease(event)) return;
+
+  await handleReaderClickCommand(event);
+});
+
+window.addEventListener('mouseup', () => {
+  stopHoldScroll();
+});
+
+window.addEventListener('mouseleave', () => {
+  stopHoldScroll();
 });
 
 readerContainer.addEventListener('dblclick', async (event) => {

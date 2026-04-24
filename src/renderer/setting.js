@@ -67,6 +67,8 @@ let settings = {
   backgroundOpacity: 16,
   backgroundBlur: 2,
   contentReadingMode: 'document',
+  pageClickCommand: [],
+scrollHoldCommand: [],
 };
 
 // ===== 個人主題暫存狀態 =====
@@ -1142,12 +1144,24 @@ function renderAutoplaySection() {
     settings.contentReadingMode === 'document'
       ? 'document'
       : 'comic';
+  const isDocumentMode = currentContentReadingMode === 'document';
+  const CLICK_NEXT_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M468-240q-96-5-162-74t-66-166q0-100 70-170t170-70q97 0 166 66t74 162l-84-25q-13-54-56-88.5T480-640q-66 0-113 47t-47 113q0 57 34.5 100t88.5 56l25 84ZM821-60 650-231 600-80 480-480l400 120-151 50 171 171-79 79Z"/></svg>`;
+
+const CLICK_PREV_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m492-240 25-84q54-13 88.5-56T640-480q0-66-47-113t-113-47q-57 0-100 34.5T324-517l-84 25q5-96 74-162t166-66q100 0 170 70t70 170q0 97-66 166t-162 74ZM139-60l-79-79 171-171-151-50 400-120L360-80l-50-151L139-60Z"/></svg>`;
+
+const LEFT_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M400-240 160-480l240-240 56 58-142 142h486v80H314l142 142-56 58Z"/></svg>`;
+
+const RIGHT_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m560-240-56-58 142-142H160v-80h486L504-662l56-58 240 240-240 240Z"/></svg>`;
+
+const UP_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M440-240v-368L296-464l-56-56 240-240 240 240-56 56-144-144v368h-80Z"/></svg>`;
+
+const DOWN_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-240 240-480l56-56 144 144v-368h80v368l144-144 56 56-240 240Z"/></svg>`;
 
   settingsContent.innerHTML = `
     <h1 class="settings-section-title">閱讀功能細項</h1>
 
     <div class="settings-group">
-      <div class="settings-label">閱讀模式選擇</div>
+      <div class="settings-label">閱讀模式</div>
 
       <div class="settings-check-list" id="content-reading-mode-options">
         <button class="settings-check-option" data-content-reading-mode="document" type="button">
@@ -1166,7 +1180,98 @@ function renderAutoplaySection() {
       </div>
 
       <div class="settings-hint">
-        文件模式可選取 PDF 文字；漫畫模式僅顯示頁面影像，適合漫畫與掃描檔
+        文件模式下可選取 PDF 的文字；漫畫模式僅顯示頁面，無法選取文字
+      </div>
+    </div>
+
+        <div class="settings-group">
+      <div class="settings-label">切換頁指令</div>
+
+      <div class="settings-check-list command-option-list" id="page-click-command-options">
+        <button class="settings-check-option command-option" data-page-click-command="none" type="button">
+          <span class="settings-checkbox ${settings.pageClickCommand.length === 0 ? 'checked' : ''}">
+            ${settings.pageClickCommand.length === 0 ? '✓' : ''}
+          </span>
+          <span>無額外指令</span>
+        </button>
+
+        <button
+  class="settings-check-option command-option ${isDocumentMode ? 'disabled' : ''}"
+  data-page-click-command="cornerNextPrev"
+  type="button"
+  ${isDocumentMode ? 'disabled' : ''}>
+          <span class="settings-checkbox ${settings.pageClickCommand.includes('cornerNextPrev') ? 'checked' : ''}">
+            ${settings.pageClickCommand.includes('cornerNextPrev') ? '✓' : ''}
+          </span>
+          ${CLICK_NEXT_ICON}
+          <span>下一頁 /</span>
+          ${CLICK_PREV_ICON}
+          <span>上一頁</span>
+        </button>
+
+        <button class="settings-check-option command-option" data-page-click-command="leftNextRightPrev" type="button">
+          <span class="settings-checkbox ${settings.pageClickCommand.includes('leftNextRightPrev') ? 'checked' : ''}">
+            ${settings.pageClickCommand.includes('leftNextRightPrev') ? '✓' : ''}
+          </span>
+          ${LEFT_ICON}
+          <span>下一頁 /</span>
+          ${RIGHT_ICON}
+          <span>上一頁</span>
+        </button>
+
+        <button class="settings-check-option command-option" data-page-click-command="leftPrevRightNext" type="button">
+          <span class="settings-checkbox ${settings.pageClickCommand.includes('leftPrevRightNext') ? 'checked' : ''}">
+            ${settings.pageClickCommand.includes('leftPrevRightNext') ? '✓' : ''}
+          </span>
+          ${LEFT_ICON}
+          <span>上一頁 /</span>
+          ${RIGHT_ICON}
+          <span>下一頁</span>
+        </button>
+
+        <button class="settings-check-option command-option" data-page-click-command="upPrevDownNext" type="button">
+          <span class="settings-checkbox ${settings.pageClickCommand.includes('upPrevDownNext') ? 'checked' : ''}">
+            ${settings.pageClickCommand.includes('upPrevDownNext') ? '✓' : ''}
+          </span>
+          ${UP_ICON}
+          <span>上一頁 /</span>
+          ${DOWN_ICON}
+          <span>下一頁</span>
+        </button>
+      </div>
+      <div class="settings-hint">滑鼠左 / 右鍵換頁在文件模式下無法使用</div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-label">捲動頁指令</div>
+
+      <div class="settings-check-list command-option-list" id="scroll-hold-command-options">
+        <button class="settings-check-option command-option" data-scroll-hold-command="none" type="button">
+          <span class="settings-checkbox ${settings.scrollHoldCommand.length === 0 ? 'checked' : ''}">
+            ${settings.scrollHoldCommand.length === 0 ? '✓' : ''}
+          </span>
+          <span>無額外指令</span>
+        </button>
+
+        <button class="settings-check-option command-option" data-scroll-hold-command="horizontalScroll" type="button">
+          <span class="settings-checkbox ${settings.scrollHoldCommand.includes('horizontalScroll') ? 'checked' : ''}">
+            ${settings.scrollHoldCommand.includes('horizontalScroll') ? '✓' : ''}
+          </span>
+          ${CLICK_NEXT_ICON}
+          <span>向下捲動 /</span>
+          ${CLICK_PREV_ICON}
+          <span>向上捲動</span>  
+        </button>
+
+        <button class="settings-check-option command-option" data-scroll-hold-command="verticalScroll" type="button">
+          <span class="settings-checkbox ${settings.scrollHoldCommand.includes('verticalScroll') ? 'checked' : ''}">
+            ${settings.scrollHoldCommand.includes('verticalScroll') ? '✓' : ''}
+          </span>
+          ${UP_ICON}
+          <span>向上捲動 /</span>
+          ${DOWN_ICON}
+          <span>向下捲動</span>
+        </button>
       </div>
     </div>
 
@@ -1199,6 +1304,70 @@ function renderAutoplaySection() {
     settings = await window.readerAPI.saveAppSettings(settings);
     renderAutoplaySection();
   });
+
+    document.getElementById('page-click-command-options')?.addEventListener('click', async (event) => {
+  const option = event.target.closest('[data-page-click-command]');
+  if (!option) return;
+
+  const value = option.dataset.pageClickCommand || 'none';
+
+  if (value === 'none') {
+    settings.pageClickCommand = [];
+  } else {
+    const current = Array.isArray(settings.pageClickCommand)
+      ? [...settings.pageClickCommand]
+      : [];
+
+    if (current.includes(value)) {
+  settings.pageClickCommand = current.filter((item) => item !== value);
+} else {
+  let next = [...current];
+
+  if (value === 'leftNextRightPrev') {
+    next = next.filter((item) => item !== 'leftPrevRightNext');
+  }
+
+  if (value === 'leftPrevRightNext') {
+    next = next.filter((item) => item !== 'leftNextRightPrev');
+  }
+
+  settings.pageClickCommand = [...next, value];
+}
+  }
+
+  if (settings.contentReadingMode === 'document') {
+  settings.pageClickCommand = settings.pageClickCommand.filter(
+    (item) => item !== 'cornerNextPrev'
+  );
+}
+
+  settings = await window.readerAPI.saveAppSettings(settings);
+  renderAutoplaySection();
+});
+
+  document.getElementById('scroll-hold-command-options')?.addEventListener('click', async (event) => {
+  const option = event.target.closest('[data-scroll-hold-command]');
+  if (!option) return;
+
+  const value = option.dataset.scrollHoldCommand || 'none';
+
+  if (value === 'none') {
+    settings.scrollHoldCommand = [];
+  } else {
+    const current = Array.isArray(settings.scrollHoldCommand)
+      ? [...settings.scrollHoldCommand]
+      : [];
+
+    if (current.includes(value)) {
+      settings.scrollHoldCommand = current.filter((item) => item !== value);
+    } else {
+      settings.scrollHoldCommand = [...current, value];
+    }
+  }
+
+  settings = await window.readerAPI.saveAppSettings(settings);
+  renderAutoplaySection();
+});
 
   document.getElementById('autoplay-seconds-input')?.addEventListener('input', async (event) => {
     const value = Math.max(1, Number(event.target.value) || 1);
@@ -1303,6 +1472,13 @@ async function loadInitialState() {
     appSettings?.contentReadingMode === 'comic'
     ? 'comic'
     : 'document',
+    pageClickCommand: Array.isArray(appSettings?.pageClickCommand)
+  ? appSettings.pageClickCommand
+  : [],
+
+scrollHoldCommand: Array.isArray(appSettings?.scrollHoldCommand)
+  ? appSettings.scrollHoldCommand
+  : [],
   };
 
   appearanceCustomHistory = [...settings.customColorHistory];

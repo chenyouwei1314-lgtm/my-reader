@@ -69,6 +69,30 @@ function normalizeContentReadingMode(value) {
   return value === 'comic' ? 'comic' : 'document';
 }
 
+function normalizePageClickCommand(value) {
+  const allowed = [
+    'cornerNextPrev',
+    'leftNextRightPrev',
+    'leftPrevRightNext',
+    'upPrevDownNext',
+  ];
+
+  if (!Array.isArray(value)) return [];
+
+  return value.filter((item) => allowed.includes(item));
+}
+
+function normalizeScrollHoldCommand(value) {
+  const allowed = [
+    'horizontalScroll',
+    'verticalScroll',
+  ];
+
+  if (!Array.isArray(value)) return [];
+
+  return value.filter((item) => allowed.includes(item));
+}
+
 /**
  * 數值夾取工具
  */
@@ -245,6 +269,8 @@ function loadAppState() {
         backgroundOpacity: 20,
         backgroundBlur: 0,
         contentReadingMode: 'document',
+        pageClickCommand: [],
+scrollHoldCommand: [],
       },
       recentReading: [],
     }
@@ -294,6 +320,12 @@ function loadAppState() {
         contentReadingMode: normalizeContentReadingMode(
           parsed.settings?.contentReadingMode
         ),
+        pageClickCommand: normalizePageClickCommand(
+  parsed.settings?.pageClickCommand
+),
+scrollHoldCommand: normalizeScrollHoldCommand(
+  parsed.settings?.scrollHoldCommand
+),
       },
     };
   } catch (error) {
@@ -317,6 +349,8 @@ function loadAppState() {
         backgroundOpacity: 16,
         backgroundBlur: 2,
         contentReadingMode: 'document',
+        pageClickCommand: [],
+scrollHoldCommand: [],
       },
       recentReading: [],
     };
@@ -454,6 +488,12 @@ function getAppSettings() {
     contentReadingMode: normalizeContentReadingMode(
       state.settings?.contentReadingMode
     ),
+    pageClickCommand: normalizePageClickCommand(
+  state.settings?.pageClickCommand
+),
+scrollHoldCommand: normalizeScrollHoldCommand(
+  state.settings?.scrollHoldCommand
+),
   };
 }
 
@@ -525,6 +565,12 @@ function saveAppSettings(settings = {}) {
     contentReadingMode: normalizeContentReadingMode(
       settings.contentReadingMode ?? state.settings?.contentReadingMode
     ),
+    pageClickCommand: normalizePageClickCommand(
+  settings.pageClickCommand ?? state.settings?.pageClickCommand
+),
+scrollHoldCommand: normalizeScrollHoldCommand(
+  settings.scrollHoldCommand ?? state.settings?.scrollHoldCommand
+),
   };
 
   saveAppState(state);
