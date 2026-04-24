@@ -286,9 +286,7 @@ button:hover {
   font-size: 14px;
 }
 
-/* =========================================================
-   Shared Setting Blocks
-   ========================================================= */
+/* 共用寬度與列排版 */
 .settings-block {
   width: min(100%, var(--settings-control-width));
 }
@@ -305,9 +303,7 @@ button:hover {
   min-width: 0;
 }
 
-/* =========================================================
-   Shared Controls
-   ========================================================= */
+/* 共用控制元件 */
 .settings-control,
 #pick-folder-btn,
 #pick-background-image-btn,
@@ -652,14 +648,6 @@ button:hover {
   min-width: 0;
 }
 
-.background-range-wrap {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-}
-
 /* =========================================================
    Range Slider
    ========================================================= */
@@ -705,6 +693,14 @@ input[type="range"],
 input[type="range"]::-webkit-slider-thumb,
 input[type="range"]::-moz-range-thumb {
   cursor: pointer;
+}
+
+.background-range-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
 }
 
 .range-value-tooltip {
@@ -802,9 +798,6 @@ input[type="range"]::-moz-range-thumb {
   height: 0;
 }
 
-/* =========================================================
-   Reading Command Options
-   ========================================================= */
 .command-option-list {
   gap: 10px;
 }
