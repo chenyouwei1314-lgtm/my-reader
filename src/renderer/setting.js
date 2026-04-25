@@ -1146,15 +1146,10 @@ function renderAutoplaySection() {
       : 'comic';
   const isDocumentMode = currentContentReadingMode === 'document';
   const CLICK_NEXT_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M468-240q-96-5-162-74t-66-166q0-100 70-170t170-70q97 0 166 66t74 162l-84-25q-13-54-56-88.5T480-640q-66 0-113 47t-47 113q0 57 34.5 100t88.5 56l25 84ZM821-60 650-231 600-80 480-480l400 120-151 50 171 171-79 79Z"/></svg>`;
-
   const CLICK_PREV_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m492-240 25-84q54-13 88.5-56T640-480q0-66-47-113t-113-47q-57 0-100 34.5T324-517l-84 25q5-96 74-162t166-66q100 0 170 70t70 170q0 97-66 166t-162 74ZM139-60l-79-79 171-171-151-50 400-120L360-80l-50-151L139-60Z"/></svg>`;
-
   const LEFT_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M400-240 160-480l240-240 56 58-142 142h486v80H314l142 142-56 58Z"/></svg>`;
-
   const RIGHT_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m560-240-56-58 142-142H160v-80h486L504-662l56-58 240 240-240 240Z"/></svg>`;
-
   const UP_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M440-240v-368L296-464l-56-56 240-240 240 240-56 56-144-144v368h-80Z"/></svg>`;
-
   const DOWN_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-240 240-480l56-56 144 144v-368h80v368l144-144 56 56-240 240Z"/></svg>`;
 
   settingsContent.innerHTML = `
@@ -1196,10 +1191,10 @@ function renderAutoplaySection() {
         </button>
 
         <button
-  class="settings-check-option command-option ${isDocumentMode ? 'disabled' : ''}"
-  data-page-click-command="cornerNextPrev"
-  type="button"
-  ${isDocumentMode ? 'disabled' : ''}>
+        class="settings-check-option command-option ${isDocumentMode ? 'disabled' : ''}"
+        data-page-click-command="cornerNextPrev"
+        type="button"
+        ${isDocumentMode ? 'disabled' : ''}>
           <span class="settings-checkbox ${settings.pageClickCommand.includes('cornerNextPrev') ? 'checked' : ''}">
             ${settings.pageClickCommand.includes('cornerNextPrev') ? '✓' : ''}
           </span>
@@ -1253,7 +1248,11 @@ function renderAutoplaySection() {
           <span>無額外指令</span>
         </button>
 
-        <button class="settings-check-option command-option" data-scroll-hold-command="horizontalScroll" type="button">
+        <button
+        class="settings-check-option command-option ${isDocumentMode ? 'disabled' : ''}"
+        data-scroll-hold-command="horizontalScroll"
+        type="button"
+        ${isDocumentMode ? 'disabled' : ''}>
           <span class="settings-checkbox ${settings.scrollHoldCommand.includes('horizontalScroll') ? 'checked' : ''}">
             ${settings.scrollHoldCommand.includes('horizontalScroll') ? '✓' : ''}
           </span>
@@ -1273,6 +1272,7 @@ function renderAutoplaySection() {
           <span>向下捲動</span>
         </button>
       </div>
+      <div class="settings-hint">滑鼠左 / 右鍵換頁在文件模式下無法使用</div>
     </div>
 
     <div class="settings-group">
@@ -1350,6 +1350,9 @@ function renderAutoplaySection() {
     if (!option) return;
 
     const value = option.dataset.scrollHoldCommand || 'none';
+    if (settings.contentReadingMode === 'document' && value === 'horizontalScroll') {
+      return;
+    }
 
     if (value === 'none') {
       settings.scrollHoldCommand = [];
@@ -1363,6 +1366,12 @@ function renderAutoplaySection() {
       } else {
         settings.scrollHoldCommand = [...current, value];
       }
+    }
+
+    if (settings.contentReadingMode === 'document') {
+      settings.scrollHoldCommand = settings.scrollHoldCommand.filter(
+        (item) => item !== 'horizontalScroll'
+      );
     }
 
     settings = await window.readerAPI.saveAppSettings(settings);

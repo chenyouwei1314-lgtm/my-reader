@@ -141,6 +141,14 @@ body {
   height: 18px;
 }
 
+.toolbar-btn:focus,
+.toolbar-btn:focus-visible,
+.toolbar-icon-btn:focus,
+.toolbar-icon-btn:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
 .favorite-toolbar-btn {
   background: rgba(255, 79, 154, 0.4);
   color: #ff4f9a;

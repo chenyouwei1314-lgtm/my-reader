@@ -1933,7 +1933,7 @@ async function nextPage(options = {}) {
 
   const changed = await jumpToPage(targetPage, {
     updateIndicator: true,
-    animatePagedTurn: readerMode === 'paged' && pageFitMode === 'width',
+    animatePagedTurn: readerMode === 'paged',
     forceInstant: false,
     direction: 1,
   });
@@ -1955,7 +1955,7 @@ async function prevPage(options = {}) {
 
   const changed = await jumpToPage(targetPage, {
     updateIndicator: true,
-    animatePagedTurn: readerMode === 'paged' && pageFitMode === 'width',
+    animatePagedTurn: readerMode === 'paged',
     forceInstant: false,
     direction: -1,
   });
@@ -2331,6 +2331,7 @@ async function handleReaderClickCommand(event) {
 
 function handleReaderHoldCommandStart(event) {
   if (readerMode !== 'scroll') return;
+  if (contentReadingMode === 'document') return;
   if (!Array.isArray(scrollHoldCommand) || scrollHoldCommand.length === 0) return;
   if (event.target.closest?.('.reader-toolbar')) return;
   if (event.target.closest?.('.pdf-copy-popover')) return;
@@ -2481,50 +2482,107 @@ document.addEventListener('keydown', async (event) => {
     return;
   }
 
-  if (event.key === 'ArrowDown') {
-    event.preventDefault();
+  const isArrowOrPageKey =
+    event.key === 'ArrowDown' ||
+    event.key === 'ArrowUp' ||
+    event.key === 'ArrowRight' ||
+    event.key === 'ArrowLeft' ||
+    event.key === 'PageDown' ||
+    event.key === 'PageUp';
 
+  // 只要是閱讀器內的方向鍵 / PageUp / PageDown，都先禁止瀏覽器原生捲動
+  if (isArrowOrPageKey) {
+    event.preventDefault();
+  }
+
+  const hasUpDownPageCommand =
+    Array.isArray(pageClickCommand) &&
+    pageClickCommand.includes('upPrevDownNext');
+
+  const hasLeftRightPageCommand =
+    Array.isArray(pageClickCommand) &&
+    (
+      pageClickCommand.includes('leftNextRightPrev') ||
+      pageClickCommand.includes('leftPrevRightNext')
+    );
+
+  const hasVerticalScrollCommand =
+    Array.isArray(scrollHoldCommand) &&
+    scrollHoldCommand.includes('verticalScroll');
+
+  const hasHorizontalScrollCommand =
+    Array.isArray(scrollHoldCommand) &&
+    scrollHoldCommand.includes('horizontalScroll');
+
+  if (event.key === 'ArrowDown') {
     if (readerMode === 'paged') {
+      if (!hasUpDownPageCommand) return;
       startKeyHoldPageTurn(1);
-    } else {
-      readerContainer.scrollBy({ top: KEY_SCROLL_STEP, behavior: 'auto' });
+      return;
     }
 
+    if (!hasVerticalScrollCommand) return;
+    readerContainer.scrollBy({ top: KEY_SCROLL_STEP, behavior: 'auto' });
     return;
   }
 
   if (event.key === 'ArrowUp') {
-    event.preventDefault();
-
     if (readerMode === 'paged') {
+      if (!hasUpDownPageCommand) return;
       startKeyHoldPageTurn(-1);
-    } else {
-      readerContainer.scrollBy({ top: -KEY_SCROLL_STEP, behavior: 'auto' });
+      return;
     }
 
+    if (!hasVerticalScrollCommand) return;
+    readerContainer.scrollBy({ top: -KEY_SCROLL_STEP, behavior: 'auto' });
     return;
   }
 
   if (event.key === 'ArrowRight' || event.key === 'PageDown') {
-    event.preventDefault();
-
     if (readerMode === 'paged') {
-      startKeyHoldPageTurn(1);
-    } else {
-      readerContainer.scrollBy({ top: readerContainer.clientHeight * 0.85, behavior: 'auto' });
+      if (!hasLeftRightPageCommand) return;
+
+      if (pageClickCommand.includes('leftNextRightPrev')) {
+        startKeyHoldPageTurn(-1);
+      } else {
+        startKeyHoldPageTurn(1);
+      }
+
+      return;
     }
 
+    if (event.key === 'ArrowRight') return;
+
+    if (!hasVerticalScrollCommand) return;
+
+    readerContainer.scrollBy({
+      top: readerContainer.clientHeight * 0.85,
+      behavior: 'auto',
+    });
     return;
   }
 
   if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
-    event.preventDefault();
-
     if (readerMode === 'paged') {
-      startKeyHoldPageTurn(-1);
-    } else {
-      readerContainer.scrollBy({ top: -readerContainer.clientHeight * 0.85, behavior: 'auto' });
+      if (!hasLeftRightPageCommand) return;
+
+      if (pageClickCommand.includes('leftNextRightPrev')) {
+        startKeyHoldPageTurn(1);
+      } else {
+        startKeyHoldPageTurn(-1);
+      }
+
+      return;
     }
+
+    if (event.key === 'ArrowLeft') return;
+
+    if (!hasVerticalScrollCommand) return;
+
+    readerContainer.scrollBy({
+      top: -readerContainer.clientHeight * 0.85,
+      behavior: 'auto',
+    });
   }
 });
 
