@@ -270,7 +270,7 @@ function loadAppState() {
         backgroundBlur: 0,
         contentReadingMode: 'document',
         pageClickCommand: [],
-scrollHoldCommand: [],
+        scrollHoldCommand: [],
       },
       recentReading: [],
     }
@@ -321,11 +321,11 @@ scrollHoldCommand: [],
           parsed.settings?.contentReadingMode
         ),
         pageClickCommand: normalizePageClickCommand(
-  parsed.settings?.pageClickCommand
-),
-scrollHoldCommand: normalizeScrollHoldCommand(
-  parsed.settings?.scrollHoldCommand
-),
+          parsed.settings?.pageClickCommand
+        ),
+        scrollHoldCommand: normalizeScrollHoldCommand(
+          parsed.settings?.scrollHoldCommand
+        ),
       },
     };
   } catch (error) {
@@ -350,7 +350,7 @@ scrollHoldCommand: normalizeScrollHoldCommand(
         backgroundBlur: 2,
         contentReadingMode: 'document',
         pageClickCommand: [],
-scrollHoldCommand: [],
+        scrollHoldCommand: [],
       },
       recentReading: [],
     };
@@ -489,11 +489,11 @@ function getAppSettings() {
       state.settings?.contentReadingMode
     ),
     pageClickCommand: normalizePageClickCommand(
-  state.settings?.pageClickCommand
-),
-scrollHoldCommand: normalizeScrollHoldCommand(
-  state.settings?.scrollHoldCommand
-),
+      state.settings?.pageClickCommand
+    ),
+    scrollHoldCommand: normalizeScrollHoldCommand(
+      state.settings?.scrollHoldCommand
+    ),
   };
 }
 
@@ -566,11 +566,11 @@ function saveAppSettings(settings = {}) {
       settings.contentReadingMode ?? state.settings?.contentReadingMode
     ),
     pageClickCommand: normalizePageClickCommand(
-  settings.pageClickCommand ?? state.settings?.pageClickCommand
-),
-scrollHoldCommand: normalizeScrollHoldCommand(
-  settings.scrollHoldCommand ?? state.settings?.scrollHoldCommand
-),
+      settings.pageClickCommand ?? state.settings?.pageClickCommand
+    ),
+    scrollHoldCommand: normalizeScrollHoldCommand(
+      settings.scrollHoldCommand ?? state.settings?.scrollHoldCommand
+    ),
   };
 
   saveAppState(state);

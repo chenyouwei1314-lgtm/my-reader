@@ -738,17 +738,17 @@ async function loadReaderSettings() {
     );
 
     contentReadingMode =
-    settings?.contentReadingMode === 'comic'
-    ? 'comic'
-    : 'document';
+      settings?.contentReadingMode === 'comic'
+        ? 'comic'
+        : 'document';
 
     pageClickCommand = Array.isArray(settings?.pageClickCommand)
-  ? settings.pageClickCommand
-  : [];
+      ? settings.pageClickCommand
+      : [];
 
-scrollHoldCommand = Array.isArray(settings?.scrollHoldCommand)
-  ? settings.scrollHoldCommand
-  : [];
+    scrollHoldCommand = Array.isArray(settings?.scrollHoldCommand)
+      ? settings.scrollHoldCommand
+      : [];
 
     applyReaderTheme(document.documentElement, settings);
   } catch (error) {
@@ -773,12 +773,12 @@ async function applyNewSettings(settings) {
   const modeChanged = nextContentReadingMode !== contentReadingMode;
   contentReadingMode = nextContentReadingMode;
   pageClickCommand = Array.isArray(settings?.pageClickCommand)
-  ? settings.pageClickCommand
-  : [];
+    ? settings.pageClickCommand
+    : [];
 
-scrollHoldCommand = Array.isArray(settings?.scrollHoldCommand)
-  ? settings.scrollHoldCommand
-  : [];
+  scrollHoldCommand = Array.isArray(settings?.scrollHoldCommand)
+    ? settings.scrollHoldCommand
+    : [];
 
   applyReaderTheme(document.documentElement, settings);
 
@@ -959,15 +959,15 @@ async function buildPdfTextMap(page, viewport, pageNumber) {
       const right = left + charWidth;
 
       chars.push({
-  char,
-  left,
-  right,
-  top: y,
-  bottom: y + fontHeight,
-  lineId,
-  indexInLine,
-  globalIndex: chars.length,
-});
+        char,
+        left,
+        right,
+        top: y,
+        bottom: y + fontHeight,
+        lineId,
+        indexInLine,
+        globalIndex: chars.length,
+      });
 
       indexInLine += 1;
     });
@@ -1426,18 +1426,18 @@ function updateCustomPdfSelection(event) {
 
   const chars = pdfTextMapByPage.get(pageNumber) || [];
 
-const startIndex = findNearestCharIndex(chars, customPdfSelection.start);
-const endIndex = findNearestCharIndex(chars, end);
+  const startIndex = findNearestCharIndex(chars, customPdfSelection.start);
+  const endIndex = findNearestCharIndex(chars, end);
 
-if (startIndex < 0 || endIndex < 0) return;
+  if (startIndex < 0 || endIndex < 0) return;
 
-const fromIndex = Math.min(startIndex, endIndex);
-const toIndex = Math.max(startIndex, endIndex);
+  const fromIndex = Math.min(startIndex, endIndex);
+  const toIndex = Math.max(startIndex, endIndex);
 
-const selectedChars = chars.filter((charBox) =>
-  charBox.globalIndex >= fromIndex &&
-  charBox.globalIndex <= toIndex
-);
+  const selectedChars = chars.filter((charBox) =>
+    charBox.globalIndex >= fromIndex &&
+    charBox.globalIndex <= toIndex
+  );
 
   customPdfSelection.chars = selectedChars;
   drawCustomPdfSelection(pageLayer, selectedChars);
@@ -1659,13 +1659,13 @@ async function renderPage(pageNumber) {
   try {
     let pageElement = null;
 
-if (bookType === 'pdf' && contentReadingMode === 'document') {
-  pageElement = await buildSelectablePdfPage(pageNumber);
-} else if (bookType === 'pdf') {
-  pageElement = await buildPdfCanvas(pageNumber);
-} else {
-  pageElement = await buildCbzCanvas(pageNumber);
-}
+    if (bookType === 'pdf' && contentReadingMode === 'document') {
+      pageElement = await buildSelectablePdfPage(pageNumber);
+    } else if (bookType === 'pdf') {
+      pageElement = await buildPdfCanvas(pageNumber);
+    } else {
+      pageElement = await buildCbzCanvas(pageNumber);
+    }
 
     const placeholder = wrapper.querySelector('.pdf-page-placeholder');
     if (placeholder) {
@@ -2146,20 +2146,20 @@ async function toggleFullscreen() {
 
     await waitForViewerSizeToStabilize();
 
-if (isSelectablePdfMode()) {
-  clearPdfCache();
-  pdfTextMapByPage.clear();
-  clearCustomPdfSelection();
-  await renderDocumentStructure(anchorPage);
-} else {
-  updateVisibleCanvasDisplaySizes();
-  await new Promise((resolve) => requestAnimationFrame(resolve));
-  await jumpToPage(anchorPage, {
-    updateIndicator: true,
-    forceInstant: true,
-    animatePagedTurn: false,
-  });
-}
+    if (isSelectablePdfMode()) {
+      clearPdfCache();
+      pdfTextMapByPage.clear();
+      clearCustomPdfSelection();
+      await renderDocumentStructure(anchorPage);
+    } else {
+      updateVisibleCanvasDisplaySizes();
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      await jumpToPage(anchorPage, {
+        updateIndicator: true,
+        forceInstant: true,
+        animatePagedTurn: false,
+      });
+    }
 
     requestAnimationFrame(() => {
       suppressScrollSync = false;
@@ -2296,37 +2296,37 @@ async function handleReaderClickCommand(event) {
   const isDown = !isUp;
 
   if (pageClickCommand.includes('cornerNextPrev')) {
-  if (contentReadingMode === 'document') return;
+    if (contentReadingMode === 'document') return;
 
-  if (event.button === 0) {
-    await nextPage();
+    if (event.button === 0) {
+      await nextPage();
+      return;
+    }
+
+    if (event.button === 2) {
+      await prevPage();
+      return;
+    }
+  }
+
+  if (event.button !== 0) return;
+
+  if (pageClickCommand.includes('leftNextRightPrev')) {
+    if (isLeft) await nextPage();
+    else await prevPage();
     return;
   }
 
-  if (event.button === 2) {
-    await prevPage();
+  if (pageClickCommand.includes('leftPrevRightNext')) {
+    if (isLeft) await prevPage();
+    else await nextPage();
     return;
   }
-}
 
-if (event.button !== 0) return;
-
-if (pageClickCommand.includes('leftNextRightPrev')) {
-  if (isLeft) await nextPage();
-  else await prevPage();
-  return;
-}
-
-if (pageClickCommand.includes('leftPrevRightNext')) {
-  if (isLeft) await prevPage();
-  else await nextPage();
-  return;
-}
-
-if (pageClickCommand.includes('upPrevDownNext')) {
-  if (isUp) await prevPage();
-  else await nextPage();
-}
+  if (pageClickCommand.includes('upPrevDownNext')) {
+    if (isUp) await prevPage();
+    else await nextPage();
+  }
 }
 
 function handleReaderHoldCommandStart(event) {
@@ -2341,16 +2341,16 @@ function handleReaderHoldCommandStart(event) {
   const y = event.clientY - rect.top;
 
   if (scrollHoldCommand.includes('horizontalScroll')) {
-  if (event.button === 0) startHoldScroll(1);
-  if (event.button === 2) startHoldScroll(-1);
-  return;
-}
+    if (event.button === 0) startHoldScroll(1);
+    if (event.button === 2) startHoldScroll(-1);
+    return;
+  }
 
-if (event.button !== 0) return;
+  if (event.button !== 0) return;
 
-if (scrollHoldCommand.includes('verticalScroll')) {
-  startHoldScroll(y < rect.height / 2 ? -1 : 1);
-}
+  if (scrollHoldCommand.includes('verticalScroll')) {
+    startHoldScroll(y < rect.height / 2 ? -1 : 1);
+  }
 }
 
 // =========================================================
@@ -2461,18 +2461,18 @@ pageIndicator?.addEventListener('blur', async () => {
 
 document.addEventListener('keydown', async (event) => {
   if (
-  event.ctrlKey &&
-  event.key.toLowerCase() === 'c' &&
-  contentReadingMode === 'document'
-) {
-  const selectedText = getSelectedPdfText();
+    event.ctrlKey &&
+    event.key.toLowerCase() === 'c' &&
+    contentReadingMode === 'document'
+  ) {
+    const selectedText = getSelectedPdfText();
 
-  if (selectedText) {
-    event.preventDefault();
-    await copyCustomPdfSelection();
-    return;
+    if (selectedText) {
+      event.preventDefault();
+      await copyCustomPdfSelection();
+      return;
+    }
   }
-}
 
   if (isPageIndicatorEditing) return;
 
@@ -2481,51 +2481,51 @@ document.addEventListener('keydown', async (event) => {
     return;
   }
 
-if (event.key === 'ArrowDown') {
-  event.preventDefault();
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
 
-  if (readerMode === 'paged') {
-    startKeyHoldPageTurn(1);
-  } else {
-    readerContainer.scrollBy({ top: KEY_SCROLL_STEP, behavior: 'auto' });
+    if (readerMode === 'paged') {
+      startKeyHoldPageTurn(1);
+    } else {
+      readerContainer.scrollBy({ top: KEY_SCROLL_STEP, behavior: 'auto' });
+    }
+
+    return;
   }
 
-  return;
-}
+  if (event.key === 'ArrowUp') {
+    event.preventDefault();
 
-if (event.key === 'ArrowUp') {
-  event.preventDefault();
+    if (readerMode === 'paged') {
+      startKeyHoldPageTurn(-1);
+    } else {
+      readerContainer.scrollBy({ top: -KEY_SCROLL_STEP, behavior: 'auto' });
+    }
 
-  if (readerMode === 'paged') {
-    startKeyHoldPageTurn(-1);
-  } else {
-    readerContainer.scrollBy({ top: -KEY_SCROLL_STEP, behavior: 'auto' });
+    return;
   }
 
-  return;
-}
+  if (event.key === 'ArrowRight' || event.key === 'PageDown') {
+    event.preventDefault();
 
-if (event.key === 'ArrowRight' || event.key === 'PageDown') {
-  event.preventDefault();
+    if (readerMode === 'paged') {
+      startKeyHoldPageTurn(1);
+    } else {
+      readerContainer.scrollBy({ top: readerContainer.clientHeight * 0.85, behavior: 'auto' });
+    }
 
-  if (readerMode === 'paged') {
-    startKeyHoldPageTurn(1);
-  } else {
-    readerContainer.scrollBy({ top: readerContainer.clientHeight * 0.85, behavior: 'auto' });
+    return;
   }
 
-  return;
-}
+  if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
+    event.preventDefault();
 
-if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
-  event.preventDefault();
-
-  if (readerMode === 'paged') {
-    startKeyHoldPageTurn(-1);
-  } else {
-    readerContainer.scrollBy({ top: -readerContainer.clientHeight * 0.85, behavior: 'auto' });
+    if (readerMode === 'paged') {
+      startKeyHoldPageTurn(-1);
+    } else {
+      readerContainer.scrollBy({ top: -readerContainer.clientHeight * 0.85, behavior: 'auto' });
+    }
   }
-}
 });
 
 document.addEventListener('keyup', (event) => {
@@ -2576,50 +2576,50 @@ window.addEventListener(
       return;
     }
 
-      if (pageFitMode === 'width') {
-        const direction = event.deltaY > 0 ? 1 : event.deltaY < 0 ? -1 : 0;
-        const shouldTurnPage = canTurnPageInPagedFitWidth(event.deltaY);
+    if (pageFitMode === 'width') {
+      const direction = event.deltaY > 0 ? 1 : event.deltaY < 0 ? -1 : 0;
+      const shouldTurnPage = canTurnPageInPagedFitWidth(event.deltaY);
 
-        // 還沒碰到邊界：正常頁內捲動
-        if (!shouldTurnPage) {
-          resetPagedFitWidthBoundaryGuard();
-          return;
-        }
+      // 還沒碰到邊界：正常頁內捲動
+      if (!shouldTurnPage) {
+        resetPagedFitWidthBoundaryGuard();
+        return;
+      }
 
-        // 一碰到邊界，就立刻阻止原生 scroll，避免露出前後頁
-        event.preventDefault();
-        clampScrollWithinCurrentPageInPagedFitWidth();
+      // 一碰到邊界，就立刻阻止原生 scroll，避免露出前後頁
+      event.preventDefault();
+      clampScrollWithinCurrentPageInPagedFitWidth();
 
-        // 第一次碰到邊界：只做邊界提示，不翻頁
-        const isFirstBoundaryHit =
+      // 第一次碰到邊界：只做邊界提示，不翻頁
+      const isFirstBoundaryHit =
         !pagedFitWidthBoundaryArmed ||
         pagedFitWidthBoundaryDirection !== direction ||
         pagedFitWidthBoundaryPage !== currentPage;
 
-        if (isFirstBoundaryHit) {
-          pagedFitWidthBoundaryArmed = true;
-          pagedFitWidthBoundaryDirection = direction;
-          pagedFitWidthBoundaryPage = currentPage;
-          return;
-        }
-
-        // 第二次同方向、同一頁、同邊界，才真的翻頁
-        if (now - lastPagedWheelTime < cooldown) {
-          return;
-        }
-
-        lastPagedWheelTime = now;
-        resetPagedFitWidthBoundaryGuard();
-
-        if (direction > 0) {
-          await nextPage();
-        } else if (direction < 0) {
-          await prevPage();
-        }
-        
+      if (isFirstBoundaryHit) {
+        pagedFitWidthBoundaryArmed = true;
+        pagedFitWidthBoundaryDirection = direction;
+        pagedFitWidthBoundaryPage = currentPage;
         return;
       }
-    },
+
+      // 第二次同方向、同一頁、同邊界，才真的翻頁
+      if (now - lastPagedWheelTime < cooldown) {
+        return;
+      }
+
+      lastPagedWheelTime = now;
+      resetPagedFitWidthBoundaryGuard();
+
+      if (direction > 0) {
+        await nextPage();
+      } else if (direction < 0) {
+        await prevPage();
+      }
+
+      return;
+    }
+  },
   { passive: false }
 );
 
@@ -2725,16 +2725,16 @@ window.addEventListener('resize', () => {
 
       await waitForViewerSizeToStabilize();
 
-if (isSelectablePdfMode()) {
-  clearPdfCache();
-  pdfTextMapByPage.clear();
-  clearCustomPdfSelection();
-  await renderDocumentStructure(anchorPage);
-  return;
-}
+      if (isSelectablePdfMode()) {
+        clearPdfCache();
+        pdfTextMapByPage.clear();
+        clearCustomPdfSelection();
+        await renderDocumentStructure(anchorPage);
+        return;
+      }
 
-updateVisibleCanvasDisplaySizes();
-await new Promise((resolve) => requestAnimationFrame(resolve));
+      updateVisibleCanvasDisplaySizes();
+      await new Promise((resolve) => requestAnimationFrame(resolve));
 
       // 若目前頁附近有尚未渲染頁，再補 render
       const pagesToEnsure = new Set([

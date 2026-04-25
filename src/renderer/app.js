@@ -1035,7 +1035,7 @@ async function updateReadingProgressText(book) {
 
     const completedText =
       record.completed === true ||
-      (Number(totalPages) > 0 && Number(currentPage) >= Number(totalPages))
+        (Number(totalPages) > 0 && Number(currentPage) >= Number(totalPages))
         ? '（已看完）'
         : '';
 
@@ -1162,7 +1162,7 @@ async function renderBookGrid() {
       openReader(bookId);
     });
   });
-  
+
   renderDetailPanel();
   applyRecentBookCardWidth();
   await renderRecentReadingSection();
@@ -1174,7 +1174,7 @@ async function renderBookGrid() {
     const selectedImg = document.querySelector(
       `[data-cover-book-id="${selectedBook.id}"]`
     );
-  
+
     if (selectedImg) {
       loadCover(selectedBook, selectedImg, GRID_COVER_WIDTH);
     }

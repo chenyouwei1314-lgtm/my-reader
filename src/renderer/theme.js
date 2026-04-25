@@ -8,7 +8,7 @@ const PRESET_THEME_COLORS = [
   '#8f8f8f',
   '#ffffff',
   '#ff3b30',
-  '#ff9500',  
+  '#ff9500',
   '#ffcc00',
   '#34c759',
   '#007aff',

@@ -68,7 +68,7 @@ let settings = {
   backgroundBlur: 2,
   contentReadingMode: 'document',
   pageClickCommand: [],
-scrollHoldCommand: [],
+  scrollHoldCommand: [],
 };
 
 // ===== 個人主題暫存狀態 =====
@@ -505,14 +505,14 @@ function renderLibrarySection() {
   `;
 
   document.getElementById('pick-folder-btn')?.addEventListener('click', async () => {
-  const folderPath = await window.readerAPI.pickLibraryFolder();
-  if (!folderPath) return;
+    const folderPath = await window.readerAPI.pickLibraryFolder();
+    if (!folderPath) return;
 
-  await window.readerAPI.pushLibraryHistory?.(folderPath);
-  await applyLibraryChange(folderPath);
+    await window.readerAPI.pushLibraryHistory?.(folderPath);
+    await applyLibraryChange(folderPath);
 
-  renderSection();
-});
+    renderSection();
+  });
 
   const input = document.getElementById('display-library-name-input');
   const hint = document.getElementById('display-library-name-hint');
@@ -611,12 +611,12 @@ function renderAppearanceSection() {
       <div class="appearance-row">
         <div class="appearance-row-controls appearance-row-controls-classic">
           ${PRESET_THEME_COLORS.map((color) => {
-            const normalizedColor = normalizeThemeColor(color, DEFAULT_THEME.accentColor);
-            const isSelected =
-              appearanceSelectionSource === 'classic' &&
-              normalizedColor === effectiveAccentColor;
+    const normalizedColor = normalizeThemeColor(color, DEFAULT_THEME.accentColor);
+    const isSelected =
+      appearanceSelectionSource === 'classic' &&
+      normalizedColor === effectiveAccentColor;
 
-            return `
+    return `
               <button
                 class="appearance-color-option ${isSelected ? 'selected' : ''}"
                 type="button"
@@ -625,7 +625,7 @@ function renderAppearanceSection() {
                 title="${color}">
               </button>
             `;
-          }).join('')}
+  }).join('')}
         </div>
       </div>
 
@@ -969,8 +969,8 @@ function renderHistorySection() {
     : 'hidden';
 
   const visibleHistoryPaths = libraryHistoryPaths
-  .filter((path) => path && path !== currentLibraryPath)
-  .slice(0, 3);
+    .filter((path) => path && path !== currentLibraryPath)
+    .slice(0, 3);
 
   const historyPath1 = visibleHistoryPaths[0] || '目前沒有紀錄';
   const historyPath2 = visibleHistoryPaths[1] || '目前沒有紀錄';
@@ -1109,16 +1109,16 @@ function renderHistorySection() {
   });
 
   document.getElementById('open-history-library-btn')?.addEventListener('click', async () => {
-  if (!pendingHistoryLibraryPath) return;
+    if (!pendingHistoryLibraryPath) return;
 
-  const openedPath = await window.readerAPI.openHistoryLibraryFolder?.(pendingHistoryLibraryPath);
-  if (!openedPath) return;
+    const openedPath = await window.readerAPI.openHistoryLibraryFolder?.(pendingHistoryLibraryPath);
+    if (!openedPath) return;
 
-  await applyLibraryChange(openedPath);
+    await applyLibraryChange(openedPath);
 
-  resetHistoryDraftState();
-  renderSection();
-});
+    resetHistoryDraftState();
+    renderSection();
+  });
 
   document.getElementById('clear-reading-progress-check')?.addEventListener('click', () => {
     clearReadingProgressChecked = !clearReadingProgressChecked;
@@ -1147,15 +1147,15 @@ function renderAutoplaySection() {
   const isDocumentMode = currentContentReadingMode === 'document';
   const CLICK_NEXT_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M468-240q-96-5-162-74t-66-166q0-100 70-170t170-70q97 0 166 66t74 162l-84-25q-13-54-56-88.5T480-640q-66 0-113 47t-47 113q0 57 34.5 100t88.5 56l25 84ZM821-60 650-231 600-80 480-480l400 120-151 50 171 171-79 79Z"/></svg>`;
 
-const CLICK_PREV_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m492-240 25-84q54-13 88.5-56T640-480q0-66-47-113t-113-47q-57 0-100 34.5T324-517l-84 25q5-96 74-162t166-66q100 0 170 70t70 170q0 97-66 166t-162 74ZM139-60l-79-79 171-171-151-50 400-120L360-80l-50-151L139-60Z"/></svg>`;
+  const CLICK_PREV_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m492-240 25-84q54-13 88.5-56T640-480q0-66-47-113t-113-47q-57 0-100 34.5T324-517l-84 25q5-96 74-162t166-66q100 0 170 70t70 170q0 97-66 166t-162 74ZM139-60l-79-79 171-171-151-50 400-120L360-80l-50-151L139-60Z"/></svg>`;
 
-const LEFT_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M400-240 160-480l240-240 56 58-142 142h486v80H314l142 142-56 58Z"/></svg>`;
+  const LEFT_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M400-240 160-480l240-240 56 58-142 142h486v80H314l142 142-56 58Z"/></svg>`;
 
-const RIGHT_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m560-240-56-58 142-142H160v-80h486L504-662l56-58 240 240-240 240Z"/></svg>`;
+  const RIGHT_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m560-240-56-58 142-142H160v-80h486L504-662l56-58 240 240-240 240Z"/></svg>`;
 
-const UP_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M440-240v-368L296-464l-56-56 240-240 240 240-56 56-144-144v368h-80Z"/></svg>`;
+  const UP_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M440-240v-368L296-464l-56-56 240-240 240 240-56 56-144-144v368h-80Z"/></svg>`;
 
-const DOWN_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-240 240-480l56-56 144 144v-368h80v368l144-144 56 56-240 240Z"/></svg>`;
+  const DOWN_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-240 240-480l56-56 144 144v-368h80v368l144-144 56 56-240 240Z"/></svg>`;
 
   settingsContent.innerHTML = `
     <h1 class="settings-section-title">閱讀功能細項</h1>
@@ -1305,69 +1305,69 @@ const DOWN_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" 
     renderAutoplaySection();
   });
 
-    document.getElementById('page-click-command-options')?.addEventListener('click', async (event) => {
-  const option = event.target.closest('[data-page-click-command]');
-  if (!option) return;
+  document.getElementById('page-click-command-options')?.addEventListener('click', async (event) => {
+    const option = event.target.closest('[data-page-click-command]');
+    if (!option) return;
 
-  const value = option.dataset.pageClickCommand || 'none';
+    const value = option.dataset.pageClickCommand || 'none';
 
-  if (value === 'none') {
-    settings.pageClickCommand = [];
-  } else {
-    const current = Array.isArray(settings.pageClickCommand)
-      ? [...settings.pageClickCommand]
-      : [];
+    if (value === 'none') {
+      settings.pageClickCommand = [];
+    } else {
+      const current = Array.isArray(settings.pageClickCommand)
+        ? [...settings.pageClickCommand]
+        : [];
 
-    if (current.includes(value)) {
-  settings.pageClickCommand = current.filter((item) => item !== value);
-} else {
-  let next = [...current];
+      if (current.includes(value)) {
+        settings.pageClickCommand = current.filter((item) => item !== value);
+      } else {
+        let next = [...current];
 
-  if (value === 'leftNextRightPrev') {
-    next = next.filter((item) => item !== 'leftPrevRightNext');
-  }
+        if (value === 'leftNextRightPrev') {
+          next = next.filter((item) => item !== 'leftPrevRightNext');
+        }
 
-  if (value === 'leftPrevRightNext') {
-    next = next.filter((item) => item !== 'leftNextRightPrev');
-  }
+        if (value === 'leftPrevRightNext') {
+          next = next.filter((item) => item !== 'leftNextRightPrev');
+        }
 
-  settings.pageClickCommand = [...next, value];
-}
-  }
+        settings.pageClickCommand = [...next, value];
+      }
+    }
 
-  if (settings.contentReadingMode === 'document') {
-  settings.pageClickCommand = settings.pageClickCommand.filter(
-    (item) => item !== 'cornerNextPrev'
-  );
-}
+    if (settings.contentReadingMode === 'document') {
+      settings.pageClickCommand = settings.pageClickCommand.filter(
+        (item) => item !== 'cornerNextPrev'
+      );
+    }
 
-  settings = await window.readerAPI.saveAppSettings(settings);
-  renderAutoplaySection();
-});
+    settings = await window.readerAPI.saveAppSettings(settings);
+    renderAutoplaySection();
+  });
 
   document.getElementById('scroll-hold-command-options')?.addEventListener('click', async (event) => {
-  const option = event.target.closest('[data-scroll-hold-command]');
-  if (!option) return;
+    const option = event.target.closest('[data-scroll-hold-command]');
+    if (!option) return;
 
-  const value = option.dataset.scrollHoldCommand || 'none';
+    const value = option.dataset.scrollHoldCommand || 'none';
 
-  if (value === 'none') {
-    settings.scrollHoldCommand = [];
-  } else {
-    const current = Array.isArray(settings.scrollHoldCommand)
-      ? [...settings.scrollHoldCommand]
-      : [];
-
-    if (current.includes(value)) {
-      settings.scrollHoldCommand = current.filter((item) => item !== value);
+    if (value === 'none') {
+      settings.scrollHoldCommand = [];
     } else {
-      settings.scrollHoldCommand = [...current, value];
-    }
-  }
+      const current = Array.isArray(settings.scrollHoldCommand)
+        ? [...settings.scrollHoldCommand]
+        : [];
 
-  settings = await window.readerAPI.saveAppSettings(settings);
-  renderAutoplaySection();
-});
+      if (current.includes(value)) {
+        settings.scrollHoldCommand = current.filter((item) => item !== value);
+      } else {
+        settings.scrollHoldCommand = [...current, value];
+      }
+    }
+
+    settings = await window.readerAPI.saveAppSettings(settings);
+    renderAutoplaySection();
+  });
 
   document.getElementById('autoplay-seconds-input')?.addEventListener('input', async (event) => {
     const value = Math.max(1, Number(event.target.value) || 1);
@@ -1456,29 +1456,29 @@ async function loadInitialState() {
     ),
     customColorHistory: Array.isArray(appSettings?.customColorHistory)
       ? appSettings.customColorHistory
-          .map((color) => normalizeThemeColor(color, DEFAULT_THEME.accentColor))
-          .slice(0, 5)
+        .map((color) => normalizeThemeColor(color, DEFAULT_THEME.accentColor))
+        .slice(0, 5)
       : [],
     savedColorHistory: Array.isArray(appSettings?.savedColorHistory)
       ? appSettings.savedColorHistory
-          .map((color) => normalizeThemeColor(color, DEFAULT_THEME.accentColor))
-          .slice(0, 6)
+        .map((color) => normalizeThemeColor(color, DEFAULT_THEME.accentColor))
+        .slice(0, 6)
       : [],
     backgroundMode: normalizeBackgroundMode(appSettings?.backgroundMode),
     backgroundImagePath: appSettings?.backgroundImagePath || '',
     backgroundOpacity: clampNumber(appSettings?.backgroundOpacity, 0, 100, 16),
     backgroundBlur: clampNumber(appSettings?.backgroundBlur, 0, 40, 2),
     contentReadingMode:
-    appSettings?.contentReadingMode === 'comic'
-    ? 'comic'
-    : 'document',
+      appSettings?.contentReadingMode === 'comic'
+        ? 'comic'
+        : 'document',
     pageClickCommand: Array.isArray(appSettings?.pageClickCommand)
-  ? appSettings.pageClickCommand
-  : [],
+      ? appSettings.pageClickCommand
+      : [],
 
-scrollHoldCommand: Array.isArray(appSettings?.scrollHoldCommand)
-  ? appSettings.scrollHoldCommand
-  : [],
+    scrollHoldCommand: Array.isArray(appSettings?.scrollHoldCommand)
+      ? appSettings.scrollHoldCommand
+      : [],
   };
 
   appearanceCustomHistory = [...settings.customColorHistory];
