@@ -101,6 +101,12 @@ let pageIndicatorDraftValue = '';
 let pointerDownInfo = null;
 let keyHoldTimer = null;
 
+const STRICT_DOUBLE_CLICK_MS = 220;
+const STRICT_DOUBLE_CLICK_DISTANCE = 8;
+
+let lastStrictClickInfo = null;
+let singleClickTimer = null;
+
 // =========================================================
 // 簡單記憶體快取
 // =========================================================
@@ -411,6 +417,45 @@ function isValidClickRelease(event) {
   const dt = Date.now() - pointerDownInfo.time;
 
   return dx <= 6 && dy <= 6 && dt <= 350;
+}
+
+function clearPendingSingleClick() {
+  clearTimeout(singleClickTimer);
+  singleClickTimer = null;
+}
+
+function isStrictDoubleClick(event) {
+  if (event.button !== 0) return false;
+
+  if (!lastStrictClickInfo) return false;
+
+  const now = Date.now();
+  const dt = now - lastStrictClickInfo.time;
+  const dx = Math.abs(event.clientX - lastStrictClickInfo.x);
+  const dy = Math.abs(event.clientY - lastStrictClickInfo.y);
+
+  return (
+    dt <= STRICT_DOUBLE_CLICK_MS &&
+    dx <= STRICT_DOUBLE_CLICK_DISTANCE &&
+    dy <= STRICT_DOUBLE_CLICK_DISTANCE
+  );
+}
+
+function rememberStrictClick(event) {
+  lastStrictClickInfo = {
+    x: event.clientX,
+    y: event.clientY,
+    time: Date.now(),
+  };
+}
+
+function shouldIgnoreStrictFullscreenDoubleClick(event) {
+  if (event.button !== 0) return true;
+  if (event.target.closest?.('.reader-toolbar')) return true;
+  if (event.target.closest?.('.pdf-copy-popover')) return true;
+  if (event.target.closest?.('.pdf-selectable-layer')) return true;
+
+  return false;
 }
 
 function stopKeyHoldPageTurn() {
@@ -2634,7 +2679,21 @@ readerContainer.addEventListener('mouseup', async (event) => {
 
   if (!isValidClickRelease(event)) return;
 
-  await handleReaderClickCommand(event);
+  if (!shouldIgnoreStrictFullscreenDoubleClick(event) && isStrictDoubleClick(event)) {
+    clearPendingSingleClick();
+    lastStrictClickInfo = null;
+    await toggleFullscreen();
+    return;
+  }
+
+  rememberStrictClick(event);
+
+  clearPendingSingleClick();
+
+  singleClickTimer = setTimeout(async () => {
+    await handleReaderClickCommand(event);
+    singleClickTimer = null;
+  }, STRICT_DOUBLE_CLICK_MS);
 });
 
 window.addEventListener('mouseup', () => {
@@ -2643,11 +2702,6 @@ window.addEventListener('mouseup', () => {
 
 window.addEventListener('mouseleave', () => {
   stopHoldScroll();
-});
-
-readerContainer.addEventListener('dblclick', async (event) => {
-  if (event.button !== 0) return;
-  await toggleFullscreen();
 });
 
 // resize 時保留目前 anchor page，再整體重建
