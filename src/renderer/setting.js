@@ -1181,33 +1181,50 @@ function renderAutoplaySection() {
       </div>
     </div>
 
-        <div class="settings-group">
-      <div class="settings-label">切換頁指令</div>
+    <div class="settings-group">
+      <div class="settings-label">換頁指令</div>
 
-      <div class="settings-check-list command-option-list" id="page-click-command-options">
-        <button class="settings-check-option command-option" data-page-click-command="none" type="button">
-          <span class="settings-checkbox ${settings.pageClickCommand.length === 0 ? 'checked' : ''}">
-            ${settings.pageClickCommand.length === 0 ? '✓' : ''}
+      <div class="settings-check-list command-option-list" id="turn-page-command-options">
+        <button class="settings-check-option command-option" data-turn-command="none" type="button">
+          <span class="settings-checkbox ${settings.pageClickCommand.length === 0 &&
+      settings.scrollHoldCommand.length === 0
+      ? 'checked'
+      : ''
+    }">
+            ${settings.pageClickCommand.length === 0 &&
+      settings.scrollHoldCommand.length === 0
+      ? '✓'
+      : ''
+    }
           </span>
           <span>無額外指令</span>
         </button>
 
         <button
-        class="settings-check-option command-option ${isDocumentMode ? 'disabled' : ''}"
-        data-page-click-command="cornerNextPrev"
-        type="button"
-        ${isDocumentMode ? 'disabled' : ''}>
-          <span class="settings-checkbox ${settings.pageClickCommand.includes('cornerNextPrev') ? 'checked' : ''}">
-            ${settings.pageClickCommand.includes('cornerNextPrev') ? '✓' : ''}
+          class="settings-check-option command-option ${isDocumentMode ? 'disabled' : ''}"
+          data-turn-command="mouseNextPrev"
+          type="button"
+          ${isDocumentMode ? 'disabled' : ''}>
+          <span class="settings-checkbox ${settings.pageClickCommand.includes('cornerNextPrev') ||
+      settings.scrollHoldCommand.includes('horizontalScroll')
+      ? 'checked'
+      : ''
+    }">
+            ${settings.pageClickCommand.includes('cornerNextPrev') ||
+      settings.scrollHoldCommand.includes('horizontalScroll')
+      ? '✓'
+      : ''
+    }
           </span>
           ${CLICK_NEXT_ICON}
-          <span>下一頁</span>
+          <span>下一頁 / 向下捲動</span>
           ${CLICK_PREV_ICON}
-          <span>上一頁</span>
+          <span>上一頁 / 向上捲動</span>
         </button>
 
-        <button class="settings-check-option command-option" data-page-click-command="leftNextRightPrev" type="button">
-          <span class="settings-checkbox ${settings.pageClickCommand.includes('leftNextRightPrev') ? 'checked' : ''}">
+        <button class="settings-check-option command-option" data-turn-command="leftNextRightPrev" type="button">
+          <span class="settings-checkbox ${settings.pageClickCommand.includes('leftNextRightPrev') ? 'checked' : ''
+    }">
             ${settings.pageClickCommand.includes('leftNextRightPrev') ? '✓' : ''}
           </span>
           ${LEFT_ICON}
@@ -1216,8 +1233,9 @@ function renderAutoplaySection() {
           <span>上一頁</span>
         </button>
 
-        <button class="settings-check-option command-option" data-page-click-command="leftPrevRightNext" type="button">
-          <span class="settings-checkbox ${settings.pageClickCommand.includes('leftPrevRightNext') ? 'checked' : ''}">
+        <button class="settings-check-option command-option" data-turn-command="leftPrevRightNext" type="button">
+          <span class="settings-checkbox ${settings.pageClickCommand.includes('leftPrevRightNext') ? 'checked' : ''
+    }">
             ${settings.pageClickCommand.includes('leftPrevRightNext') ? '✓' : ''}
           </span>
           ${LEFT_ICON}
@@ -1226,59 +1244,30 @@ function renderAutoplaySection() {
           <span>下一頁</span>
         </button>
 
-        <button class="settings-check-option command-option" data-page-click-command="upPrevDownNext" type="button">
-          <span class="settings-checkbox ${settings.pageClickCommand.includes('upPrevDownNext') ? 'checked' : ''}">
-            ${settings.pageClickCommand.includes('upPrevDownNext') ? '✓' : ''}
+        <button class="settings-check-option command-option" data-turn-command="upPrevDownNext" type="button">
+          <span class="settings-checkbox ${settings.pageClickCommand.includes('upPrevDownNext') ||
+      settings.scrollHoldCommand.includes('verticalScroll')
+      ? 'checked'
+      : ''
+    }">
+            ${settings.pageClickCommand.includes('upPrevDownNext') ||
+      settings.scrollHoldCommand.includes('verticalScroll')
+      ? '✓'
+      : ''
+    }
           </span>
           ${UP_ICON}
-          <span>上一頁</span>
+          <span>上一頁 / 向上捲動</span>
           ${DOWN_ICON}
-          <span>下一頁</span>
+          <span>下一頁 / 向下捲動</span>
         </button>
       </div>
-      <div class="settings-hint">滑鼠左 / 右鍵換頁在文件模式下無法使用</div>
+
+      <div class="settings-hint">滑鼠左 / 右鍵換頁與捲動在文件模式下無法使用</div>
     </div>
 
     <div class="settings-group">
-      <div class="settings-label">捲動頁指令</div>
-
-      <div class="settings-check-list command-option-list" id="scroll-hold-command-options">
-        <button class="settings-check-option command-option" data-scroll-hold-command="none" type="button">
-          <span class="settings-checkbox ${settings.scrollHoldCommand.length === 0 ? 'checked' : ''}">
-            ${settings.scrollHoldCommand.length === 0 ? '✓' : ''}
-          </span>
-          <span>無額外指令</span>
-        </button>
-
-        <button
-        class="settings-check-option command-option ${isDocumentMode ? 'disabled' : ''}"
-        data-scroll-hold-command="horizontalScroll"
-        type="button"
-        ${isDocumentMode ? 'disabled' : ''}>
-          <span class="settings-checkbox ${settings.scrollHoldCommand.includes('horizontalScroll') ? 'checked' : ''}">
-            ${settings.scrollHoldCommand.includes('horizontalScroll') ? '✓' : ''}
-          </span>
-          ${CLICK_NEXT_ICON}
-          <span>向下捲動</span>
-          ${CLICK_PREV_ICON}
-          <span>向上捲動</span>  
-        </button>
-
-        <button class="settings-check-option command-option" data-scroll-hold-command="verticalScroll" type="button">
-          <span class="settings-checkbox ${settings.scrollHoldCommand.includes('verticalScroll') ? 'checked' : ''}">
-            ${settings.scrollHoldCommand.includes('verticalScroll') ? '✓' : ''}
-          </span>
-          ${UP_ICON}
-          <span>向上捲動</span>
-          ${DOWN_ICON}
-          <span>向下捲動</span>
-        </button>
-      </div>
-      <div class="settings-hint">滑鼠左 / 右鍵換頁在文件模式下無法使用</div>
-    </div>
-
-    <div class="settings-group">
-      <div class="settings-label">書籤指令</div>
+      <div class="settings-label">書籤跳轉</div>
 
       <div class="settings-check-list command-option-list" id="bookmark-command-options">
         <button class="settings-check-option command-option" data-bookmark-command="leftNextRightPrev" type="button">
@@ -1301,6 +1290,7 @@ function renderAutoplaySection() {
           <span>下一書籤</span>
         </button>
       </div>
+      <div class="settings-hint">選擇跳轉書籤的方向</div>
     </div>
 
     <div class="settings-group">
@@ -1333,15 +1323,38 @@ function renderAutoplaySection() {
     renderAutoplaySection();
   });
 
-  document.getElementById('page-click-command-options')?.addEventListener('click', async (event) => {
-    const option = event.target.closest('[data-page-click-command]');
+  document.getElementById('turn-page-command-options')?.addEventListener('click', async (event) => {
+    const option = event.target.closest('[data-turn-command]');
     if (!option) return;
 
-    const value = option.dataset.pageClickCommand || 'none';
+    const value = option.dataset.turnCommand || 'none';
 
     if (value === 'none') {
       settings.pageClickCommand = [];
-    } else {
+      settings.scrollHoldCommand = [];
+    }
+
+    if (value === 'mouseNextPrev') {
+      if (settings.contentReadingMode === 'document') return;
+
+      const hasMouseCommand =
+        settings.pageClickCommand.includes('cornerNextPrev') ||
+        settings.scrollHoldCommand.includes('horizontalScroll');
+
+      if (hasMouseCommand) {
+        settings.pageClickCommand = settings.pageClickCommand.filter(
+          (item) => item !== 'cornerNextPrev'
+        );
+        settings.scrollHoldCommand = settings.scrollHoldCommand.filter(
+          (item) => item !== 'horizontalScroll'
+        );
+      } else {
+        settings.pageClickCommand = [...settings.pageClickCommand, 'cornerNextPrev'];
+        settings.scrollHoldCommand = [...settings.scrollHoldCommand, 'horizontalScroll'];
+      }
+    }
+
+    if (value === 'leftNextRightPrev' || value === 'leftPrevRightNext') {
       const current = Array.isArray(settings.pageClickCommand)
         ? [...settings.pageClickCommand]
         : [];
@@ -1349,17 +1362,30 @@ function renderAutoplaySection() {
       if (current.includes(value)) {
         settings.pageClickCommand = current.filter((item) => item !== value);
       } else {
-        let next = [...current];
+        settings.pageClickCommand = [
+          ...current.filter(
+            (item) => item !== 'leftNextRightPrev' && item !== 'leftPrevRightNext'
+          ),
+          value,
+        ];
+      }
+    }
 
-        if (value === 'leftNextRightPrev') {
-          next = next.filter((item) => item !== 'leftPrevRightNext');
-        }
+    if (value === 'upPrevDownNext') {
+      const hasUpDownCommand =
+        settings.pageClickCommand.includes('upPrevDownNext') ||
+        settings.scrollHoldCommand.includes('verticalScroll');
 
-        if (value === 'leftPrevRightNext') {
-          next = next.filter((item) => item !== 'leftNextRightPrev');
-        }
-
-        settings.pageClickCommand = [...next, value];
+      if (hasUpDownCommand) {
+        settings.pageClickCommand = settings.pageClickCommand.filter(
+          (item) => item !== 'upPrevDownNext'
+        );
+        settings.scrollHoldCommand = settings.scrollHoldCommand.filter(
+          (item) => item !== 'verticalScroll'
+        );
+      } else {
+        settings.pageClickCommand = [...settings.pageClickCommand, 'upPrevDownNext'];
+        settings.scrollHoldCommand = [...settings.scrollHoldCommand, 'verticalScroll'];
       }
     }
 
@@ -1367,36 +1393,6 @@ function renderAutoplaySection() {
       settings.pageClickCommand = settings.pageClickCommand.filter(
         (item) => item !== 'cornerNextPrev'
       );
-    }
-
-    settings = await window.readerAPI.saveAppSettings(settings);
-    renderAutoplaySection();
-  });
-
-  document.getElementById('scroll-hold-command-options')?.addEventListener('click', async (event) => {
-    const option = event.target.closest('[data-scroll-hold-command]');
-    if (!option) return;
-
-    const value = option.dataset.scrollHoldCommand || 'none';
-    if (settings.contentReadingMode === 'document' && value === 'horizontalScroll') {
-      return;
-    }
-
-    if (value === 'none') {
-      settings.scrollHoldCommand = [];
-    } else {
-      const current = Array.isArray(settings.scrollHoldCommand)
-        ? [...settings.scrollHoldCommand]
-        : [];
-
-      if (current.includes(value)) {
-        settings.scrollHoldCommand = current.filter((item) => item !== value);
-      } else {
-        settings.scrollHoldCommand = [...current, value];
-      }
-    }
-
-    if (settings.contentReadingMode === 'document') {
       settings.scrollHoldCommand = settings.scrollHoldCommand.filter(
         (item) => item !== 'horizontalScroll'
       );

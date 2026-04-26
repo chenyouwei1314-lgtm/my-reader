@@ -1257,8 +1257,22 @@ function scrollSelectedBookToTop() {
 
   if (!selectedCard) return;
 
-  const targetTop = Math.max(0, selectedCard.offsetTop - 30);
-  librarySection.scrollTop = targetTop;
+  const sectionRect = librarySection.getBoundingClientRect();
+  const cardRect = selectedCard.getBoundingClientRect();
+
+  const targetTop =
+    librarySection.scrollTop +
+    cardRect.top -
+    sectionRect.top -
+    30;
+
+  const maxScrollTop =
+    librarySection.scrollHeight - librarySection.clientHeight;
+
+  librarySection.scrollTop = Math.min(
+    Math.max(0, targetTop),
+    Math.max(0, maxScrollTop)
+  );
 }
 
 function scrollSelectedBookToTopAfterLayout() {

@@ -752,10 +752,29 @@ function createBookmarkPageIndicatorButtons() {
   });
 }
 
+function updateBookmarkNavTitles() {
+  if (!prevBookmarkBtn || !nextBookmarkBtn) return;
+
+  const leftMeansNext = bookmarkCommand !== 'leftPrevRightNext';
+
+  prevBookmarkBtn.title = leftMeansNext ? '跳轉下一書籤' : '跳轉上一書籤';
+  prevBookmarkBtn.setAttribute(
+    'aria-label',
+    leftMeansNext ? '跳轉下一書籤' : '跳轉上一書籤'
+  );
+
+  nextBookmarkBtn.title = leftMeansNext ? '跳轉上一書籤' : '跳轉下一書籤';
+  nextBookmarkBtn.setAttribute(
+    'aria-label',
+    leftMeansNext ? '跳轉上一書籤' : '跳轉下一書籤'
+  );
+}
+
 function setupBookmarkUi() {
   createBookmarkToolbarButton();
   createBookmarkPageIndicatorButtons();
   updateBookmarkButton();
+  updateBookmarkNavTitles();
 }
 
 // =========================================================
@@ -1002,6 +1021,7 @@ async function applyNewSettings(settings) {
       ? 'leftPrevRightNext'
       : 'leftNextRightPrev';
 
+  updateBookmarkNavTitles();
   applyReaderTheme(document.documentElement, settings);
 
   if (modeChanged && totalPages > 0) {

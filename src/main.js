@@ -333,6 +333,9 @@ function loadAppState() {
         scrollHoldCommand: normalizeScrollHoldCommand(
           parsed.settings?.scrollHoldCommand
         ),
+        bookmarkCommand: normalizeBookmarkCommand(
+          parsed.settings?.bookmarkCommand
+        ),
       },
     };
   } catch (error) {
