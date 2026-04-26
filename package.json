@@ -1,6 +1,6 @@
 {
-  "name": "Luma Reader",
-  "productName": "Luma Reader",
+  "name": "AirWei Reader",
+  "productName": "AirWei Reader",
   "version": "1.0.0",
   "description": "My Electron application description",
   "main": ".webpack/main",

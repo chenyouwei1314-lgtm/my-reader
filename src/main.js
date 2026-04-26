@@ -866,6 +866,7 @@ function createWindow() {
     minWidth: 1000,
     minHeight: 750,
     autoHideMenuBar: true,
+    icon: path.join(__dirname, 'AirWei Reader black.ico'),
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       contextIsolation: true,
@@ -911,6 +912,7 @@ function createReaderWindow(filePath, title) {
     minWidth: 900,
     minHeight: 700,
     autoHideMenuBar: true,
+    icon: path.join(__dirname, 'AirWei Reader black.ico'),
     title: `AirWei Reader - ${title}`,
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,

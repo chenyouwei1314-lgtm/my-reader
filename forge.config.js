@@ -9,7 +9,10 @@ module.exports = {
   makers: [
     {
       name: '@electron-forge/maker-squirrel',
-      config: {},
+      config: {
+        name: 'airwei_reader',
+        setupIcon: './src/AirWei Reader black.ico'
+      },
     },
     {
       name: '@electron-forge/maker-zip',
