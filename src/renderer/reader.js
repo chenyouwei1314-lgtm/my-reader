@@ -2381,7 +2381,7 @@ async function initReader() {
   }
 
   currentFilePath = filePath;
-  document.title = `My Reader - ${title}`;
+  document.title = `AirWei Reader - ${title}`;
 
   // 初始化狀態
   bookType = 'pdf';

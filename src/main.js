@@ -911,7 +911,7 @@ function createReaderWindow(filePath, title) {
     minWidth: 900,
     minHeight: 700,
     autoHideMenuBar: true,
-    title: `My Reader - ${title}`,
+    title: `AirWei Reader - ${title}`,
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       contextIsolation: true,
