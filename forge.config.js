@@ -4,6 +4,7 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 module.exports = {
   packagerConfig: {
     asar: true,
+    icon: './src/icon'
   },
   rebuildConfig: {},
   makers: [
@@ -11,7 +12,7 @@ module.exports = {
       name: '@electron-forge/maker-squirrel',
       config: {
         name: 'airwei_reader',
-        setupIcon: './src/AirWei Reader black.ico'
+        setupIcon: './src/icon.ico'
       },
     },
     {
