@@ -69,6 +69,7 @@ let settings = {
   contentReadingMode: 'document',
   pageClickCommand: [],
   scrollHoldCommand: [],
+  bookmarkCommand: 'leftNextRightPrev',
 };
 
 // ===== 個人主題暫存狀態 =====
@@ -1151,6 +1152,7 @@ function renderAutoplaySection() {
   const RIGHT_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m560-240-56-58 142-142H160v-80h486L504-662l56-58 240 240-240 240Z"/></svg>`;
   const UP_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M440-240v-368L296-464l-56-56 240-240 240 240-56 56-144-144v368h-80Z"/></svg>`;
   const DOWN_ICON = `<svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-240 240-480l56-56 144 144v-368h80v368l144-144 56 56-240 240Z"/></svg>`;
+  const BOOKMARK_ICON = `<svg class="command-icon bookmark-command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M200-120v-640q0-33 23.5-56.5T280-840h400q33 0 56.5 23.5T760-760v640L480-240 200-120Z"/></svg>`;
 
   settingsContent.innerHTML = `
     <h1 class="settings-section-title">閱讀功能細項</h1>
@@ -1276,6 +1278,32 @@ function renderAutoplaySection() {
     </div>
 
     <div class="settings-group">
+      <div class="settings-label">書籤指令</div>
+
+      <div class="settings-check-list command-option-list" id="bookmark-command-options">
+        <button class="settings-check-option command-option" data-bookmark-command="leftNextRightPrev" type="button">
+          <span class="settings-checkbox ${settings.bookmarkCommand !== 'leftPrevRightNext' ? 'checked' : ''}">
+            ${settings.bookmarkCommand !== 'leftPrevRightNext' ? '✓' : ''}
+          </span>
+          <span class="bookmark-command-left">${BOOKMARK_ICON}</span>
+          <span>下一書籤</span>
+          <span class="bookmark-command-right">${BOOKMARK_ICON}</span>
+          <span>上一書籤</span>
+        </button>
+
+        <button class="settings-check-option command-option" data-bookmark-command="leftPrevRightNext" type="button">
+          <span class="settings-checkbox ${settings.bookmarkCommand === 'leftPrevRightNext' ? 'checked' : ''}">
+            ${settings.bookmarkCommand === 'leftPrevRightNext' ? '✓' : ''}
+          </span>
+          <span class="bookmark-command-left">${BOOKMARK_ICON}</span>
+          <span>上一書籤</span>
+          <span class="bookmark-command-right">${BOOKMARK_ICON}</span>
+          <span>下一書籤</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="settings-group">
       <div class="settings-label">循環播放間隔</div>
       <div class="settings-row">
         <input
@@ -1373,6 +1401,19 @@ function renderAutoplaySection() {
         (item) => item !== 'horizontalScroll'
       );
     }
+
+    settings = await window.readerAPI.saveAppSettings(settings);
+    renderAutoplaySection();
+  });
+
+  document.getElementById('bookmark-command-options')?.addEventListener('click', async (event) => {
+    const option = event.target.closest('[data-bookmark-command]');
+    if (!option) return;
+
+    settings.bookmarkCommand =
+      option.dataset.bookmarkCommand === 'leftPrevRightNext'
+        ? 'leftPrevRightNext'
+        : 'leftNextRightPrev';
 
     settings = await window.readerAPI.saveAppSettings(settings);
     renderAutoplaySection();
@@ -1488,6 +1529,10 @@ async function loadInitialState() {
     scrollHoldCommand: Array.isArray(appSettings?.scrollHoldCommand)
       ? appSettings.scrollHoldCommand
       : [],
+    bookmarkCommand:
+      appSettings?.bookmarkCommand === 'leftPrevRightNext'
+        ? 'leftPrevRightNext'
+        : 'leftNextRightPrev',
   };
 
   appearanceCustomHistory = [...settings.customColorHistory];

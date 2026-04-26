@@ -150,24 +150,29 @@ body {
 }
 
 .favorite-toolbar-btn {
-  background: rgba(255, 79, 154, 0.4);
+  background: color-mix(in srgb, #ff4f9a 40%, transparent);
   color: #ff4f9a;
 }
 
 .favorite-toolbar-btn.active {
-  background: rgba(255, 79, 154, 0.16);
+  background: color-mix(in srgb, #ff4f9a 16%, transparent);
   color: #ff4f9a;
 }
 
+.bookmark-toolbar-btn {
+  background: color-mix(in srgb, var(--theme-accent) 40%, transparent);
+  color: var(--theme-accent);
+}
+
+.bookmark-toolbar-btn.active {
+  background: color-mix(in srgb, var(--theme-accent) 16%, transparent);
+  color: var(--theme-accent);
+}
+
 .toolbar-page-indicator {
-  min-width: 88px;
-  width: 120px;
-  height: 30px;
   padding: 0 12px;
   text-align: center;
   border-radius: 10px;
-  border: 1px solid var(--theme-input-border);
-  background: rgba(255, 255, 255, 0.08);
   color: var(--theme-text);
   font-size: 14px;
   outline: none;
@@ -176,6 +181,60 @@ body {
 .toolbar-page-indicator.editing {
   border-color: var(--theme-accent);
   background: rgba(255, 255, 255, 0.12);
+}
+
+.page-indicator-bookmark-wrap {
+  min-width: 100px;
+  width: 140px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid var(--theme-input-border);
+  background: var(--theme-surface-bg);
+}
+
+.page-indicator-bookmark-wrap .toolbar-page-indicator {
+  width: 80px;
+  min-width: 80px;
+  height: 30px;
+  padding: 0 4px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.page-bookmark-nav-btn {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  background: transparent;
+  border: none;
+  border-radius: 50px;
+  color: var(--theme-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.page-bookmark-nav-btn:hover {
+  background: color-mix(in srgb, var(--theme-surface-bg) 100%, transparent);
+}
+
+.page-bookmark-nav-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.page-bookmark-nav-left .page-bookmark-nav-icon {
+  transform: rotate(-45deg);
+}
+
+.page-bookmark-nav-right .page-bookmark-nav-icon {
+  transform: rotate(45deg);
 }
 
 #mode-icon-outer {

@@ -93,6 +93,12 @@ function normalizeScrollHoldCommand(value) {
   return value.filter((item) => allowed.includes(item));
 }
 
+function normalizeBookmarkCommand(value) {
+  return value === 'leftPrevRightNext'
+    ? 'leftPrevRightNext'
+    : 'leftNextRightPrev';
+}
+
 /**
  * 數值夾取工具
  */
@@ -271,6 +277,7 @@ function loadAppState() {
         contentReadingMode: 'document',
         pageClickCommand: [],
         scrollHoldCommand: [],
+        bookmarkCommand: 'leftNextRightPrev',
       },
       recentReading: [],
     }
@@ -351,6 +358,7 @@ function loadAppState() {
         contentReadingMode: 'document',
         pageClickCommand: [],
         scrollHoldCommand: [],
+        bookmarkCommand: 'leftNextRightPrev',
       },
       recentReading: [],
     };
@@ -494,6 +502,9 @@ function getAppSettings() {
     scrollHoldCommand: normalizeScrollHoldCommand(
       state.settings?.scrollHoldCommand
     ),
+    bookmarkCommand: normalizeBookmarkCommand(
+      state.settings?.bookmarkCommand
+    ),
   };
 }
 
@@ -570,6 +581,9 @@ function saveAppSettings(settings = {}) {
     ),
     scrollHoldCommand: normalizeScrollHoldCommand(
       settings.scrollHoldCommand ?? state.settings?.scrollHoldCommand
+    ),
+    bookmarkCommand: normalizeBookmarkCommand(
+      settings.bookmarkCommand ?? state.settings?.bookmarkCommand
     ),
   };
 

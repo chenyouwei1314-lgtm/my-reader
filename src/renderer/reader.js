@@ -107,6 +107,14 @@ const STRICT_DOUBLE_CLICK_DISTANCE = 8;
 let lastStrictClickInfo = null;
 let singleClickTimer = null;
 
+let bookmarkBtn = null;
+let bookmarkIconPath = null;
+let pageIndicatorWrap = null;
+let prevBookmarkBtn = null;
+let nextBookmarkBtn = null;
+let bookmarkCommand = 'leftNextRightPrev';
+let bookmarkPages = new Set();
+
 // =========================================================
 // 簡單記憶體快取
 // =========================================================
@@ -234,6 +242,7 @@ async function restoreReadingProgress() {
 
 function updatePageIndicator() {
   if (!pageIndicator) {
+    updateBookmarkButton();
     queueSaveReadingProgress();
     return;
   }
@@ -244,6 +253,7 @@ function updatePageIndicator() {
     pageIndicator.value = `${clampPage(currentPage)} / ${totalPages || 1}`;
   }
 
+  updateBookmarkButton();
   queueSaveReadingProgress();
 }
 
@@ -545,6 +555,210 @@ async function toggleFavorite() {
 }
 
 // =========================================================
+// 書籤
+// =========================================================
+function getBookmarkStorageKey() {
+  return `myreader-bookmarks:${currentFilePath}`;
+}
+
+function loadBookmarkPages() {
+  if (!currentFilePath) {
+    bookmarkPages = new Set();
+    return;
+  }
+
+  try {
+    const raw = localStorage.getItem(getBookmarkStorageKey());
+    const list = JSON.parse(raw || '[]');
+
+    bookmarkPages = new Set(
+      Array.isArray(list)
+        ? list
+          .map((page) => Number(page))
+          .filter((page) => Number.isInteger(page) && page >= 1)
+        : []
+    );
+  } catch (error) {
+    console.error('讀取書籤失敗:', error);
+    bookmarkPages = new Set();
+  }
+}
+
+function saveBookmarkPages() {
+  if (!currentFilePath) return;
+
+  const list = [...bookmarkPages]
+    .filter((page) => Number.isInteger(page) && page >= 1)
+    .sort((a, b) => a - b);
+
+  localStorage.setItem(getBookmarkStorageKey(), JSON.stringify(list));
+}
+
+function isCurrentPageBookmarked() {
+  return bookmarkPages.has(clampPage(currentPage));
+}
+
+function updateBookmarkButton() {
+  if (!bookmarkBtn || !bookmarkIconPath) return;
+
+  const bookmarked = isCurrentPageBookmarked();
+
+  bookmarkBtn.classList.toggle('active', bookmarked);
+  bookmarkBtn.title = bookmarked ? '移除書籤' : '加入書籤';
+  bookmarkBtn.setAttribute(
+    'aria-label',
+    bookmarked ? '移除書籤' : '加入書籤'
+  );
+
+  if (bookmarked) {
+    bookmarkIconPath.setAttribute(
+      'd',
+      'M200-120v-640q0-33 23.5-56.5T280-840h400q33 0 56.5 23.5T760-760v640L480-240 200-120Z'
+    );
+  } else {
+    bookmarkIconPath.setAttribute(
+      'd',
+      'M200-120v-640q0-33 23.5-56.5T280-840h240v80H280v518l200-86 200 86v-278h80v400L480-240 200-120Zm80-640h240-240Zm400 160v-80h-80v-80h80v-80h80v80h80v80h-80v80h-80Z'
+    );
+  }
+}
+
+function toggleCurrentPageBookmark() {
+  const page = clampPage(currentPage);
+
+  if (bookmarkPages.has(page)) {
+    bookmarkPages.delete(page);
+  } else {
+    bookmarkPages.add(page);
+  }
+
+  saveBookmarkPages();
+  updateBookmarkButton();
+}
+
+function getSortedBookmarkPages() {
+  return [...bookmarkPages]
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((a, b) => a - b);
+}
+
+async function jumpToNextBookmark() {
+  const pages = getSortedBookmarkPages();
+  if (pages.length === 0) return;
+
+  const current = clampPage(currentPage);
+  const target = pages.find((page) => page > current) || pages[0];
+
+  await jumpToPage(target, {
+    updateIndicator: true,
+    animatePagedTurn: readerMode === 'paged',
+    forceInstant: false,
+    direction: target > current ? 1 : -1,
+  });
+}
+
+async function jumpToPrevBookmark() {
+  const pages = getSortedBookmarkPages();
+  if (pages.length === 0) return;
+
+  const current = clampPage(currentPage);
+  const reversed = [...pages].reverse();
+  const target = reversed.find((page) => page < current) || reversed[0];
+
+  await jumpToPage(target, {
+    updateIndicator: true,
+    animatePagedTurn: readerMode === 'paged',
+    forceInstant: false,
+    direction: target > current ? 1 : -1,
+  });
+}
+
+async function handleBookmarkNav(direction) {
+  const leftMeansNext = bookmarkCommand !== 'leftPrevRightNext';
+
+  if (direction === 'left') {
+    if (leftMeansNext) await jumpToNextBookmark();
+    else await jumpToPrevBookmark();
+    return;
+  }
+
+  if (leftMeansNext) await jumpToPrevBookmark();
+  else await jumpToNextBookmark();
+}
+
+function createBookmarkToolbarButton() {
+  if (bookmarkBtn || !favoriteBtn) return;
+
+  bookmarkBtn = document.createElement('button');
+  bookmarkBtn.id = 'bookmark-btn';
+  bookmarkBtn.className = 'toolbar-icon-btn bookmark-toolbar-btn';
+  bookmarkBtn.type = 'button';
+
+  bookmarkBtn.innerHTML = `
+    <svg class="toolbar-svg icon-bookmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true">
+      <path id="bookmark-icon-path" fill="currentColor"></path>
+    </svg>
+  `;
+
+  bookmarkIconPath = bookmarkBtn.querySelector('#bookmark-icon-path');
+
+  favoriteBtn.parentElement?.insertBefore(bookmarkBtn, favoriteBtn.nextSibling);
+
+  bookmarkBtn.addEventListener('click', () => {
+    toggleCurrentPageBookmark();
+  });
+
+  updateBookmarkButton();
+}
+
+function createBookmarkPageIndicatorButtons() {
+  if (!pageIndicator || pageIndicatorWrap) return;
+
+  pageIndicatorWrap = document.createElement('div');
+  pageIndicatorWrap.className = 'page-indicator-bookmark-wrap';
+
+  prevBookmarkBtn = document.createElement('button');
+  prevBookmarkBtn.className = 'page-bookmark-nav-btn page-bookmark-nav-left';
+  prevBookmarkBtn.type = 'button';
+  prevBookmarkBtn.title = '跳轉下一書籤';
+
+  nextBookmarkBtn = document.createElement('button');
+  nextBookmarkBtn.className = 'page-bookmark-nav-btn page-bookmark-nav-right';
+  nextBookmarkBtn.type = 'button';
+  nextBookmarkBtn.title = '跳轉上一書籤';
+
+  const bookmarkSvg = `
+    <svg class="page-bookmark-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true">
+      <path fill="currentColor" d="M200-120v-640q0-33 23.5-56.5T280-840h400q33 0 56.5 23.5T760-760v640L480-240 200-120Z"/>
+    </svg>
+  `;
+
+  prevBookmarkBtn.innerHTML = bookmarkSvg;
+  nextBookmarkBtn.innerHTML = bookmarkSvg;
+
+  pageIndicator.parentElement?.insertBefore(pageIndicatorWrap, pageIndicator);
+  pageIndicatorWrap.appendChild(prevBookmarkBtn);
+  pageIndicatorWrap.appendChild(pageIndicator);
+  pageIndicatorWrap.appendChild(nextBookmarkBtn);
+
+  prevBookmarkBtn.addEventListener('click', async (event) => {
+    event.stopPropagation();
+    await handleBookmarkNav('left');
+  });
+
+  nextBookmarkBtn.addEventListener('click', async (event) => {
+    event.stopPropagation();
+    await handleBookmarkNav('right');
+  });
+}
+
+function setupBookmarkUi() {
+  createBookmarkToolbarButton();
+  createBookmarkPageIndicatorButtons();
+  updateBookmarkButton();
+}
+
+// =========================================================
 // 工具列按鈕狀態
 // =========================================================
 function updateModeButtons() {
@@ -554,13 +768,13 @@ function updateModeButtons() {
 
   modeToggleBtn.classList.toggle('active', !isPaged);
   modeToggleBtn.title = isPaged
-    ? '目前為切換頁模式，點擊切換成捲動頁模式'
-    : '目前為捲動頁模式，點擊切換成切換頁模式';
+    ? '切換頁模式'
+    : '捲動頁模式';
   modeToggleBtn.setAttribute(
     'aria-label',
     isPaged
-      ? '目前為切換頁模式，點擊切換成捲動頁模式'
-      : '目前為捲動頁模式，點擊切換成切換頁模式'
+      ? '切換頁模式'
+      : '捲動頁模式'
   );
 
   if (!modeIconPath) return;
@@ -585,13 +799,13 @@ function updateFitButtons() {
 
   fitToggleBtn.classList.toggle('active', !isFitHeight);
   fitToggleBtn.title = isFitHeight
-    ? '目前為 fit height，點擊切換成 fit width'
-    : '目前為 fit width，點擊切換成 fit height';
+    ? '佔滿視窗高度'
+    : '佔滿視窗寬度';
   fitToggleBtn.setAttribute(
     'aria-label',
     isFitHeight
-      ? '目前為 fit height，點擊切換成 fit width'
-      : '目前為 fit width，點擊切換成 fit height'
+      ? '佔滿視窗高度'
+      : '佔滿視窗寬度'
   );
 
   if (fitIconSvg) {
@@ -662,7 +876,7 @@ function updateAutoPlayButton() {
   autoplayBtn.disabled = !canPlay;
   autoplayBtn.classList.toggle('active', isAutoPlaying && canPlay);
   autoplayBtn.title = isAutoPlaying && canPlay
-    ? `停止循環播放（${autoPlayIntervalMs / 1000} 秒）`
+    ? `暫停播放`
     : `循環播放（${autoPlayIntervalMs / 1000} 秒）`;
 
   if (!autoplayIconPath) return;
@@ -749,6 +963,10 @@ async function loadReaderSettings() {
     scrollHoldCommand = Array.isArray(settings?.scrollHoldCommand)
       ? settings.scrollHoldCommand
       : [];
+    bookmarkCommand =
+      settings?.bookmarkCommand === 'leftPrevRightNext'
+        ? 'leftPrevRightNext'
+        : 'leftNextRightPrev';
 
     applyReaderTheme(document.documentElement, settings);
   } catch (error) {
@@ -779,6 +997,10 @@ async function applyNewSettings(settings) {
   scrollHoldCommand = Array.isArray(settings?.scrollHoldCommand)
     ? settings.scrollHoldCommand
     : [];
+  bookmarkCommand =
+    settings?.bookmarkCommand === 'leftPrevRightNext'
+      ? 'leftPrevRightNext'
+      : 'leftNextRightPrev';
 
   applyReaderTheme(document.documentElement, settings);
 
@@ -1785,95 +2007,44 @@ function cloneWrapperForTransition(wrapper, topPx) {
 }
 
 async function animatePagedPageTurn(targetPage, options = {}) {
-  if (isPagedTransitionRunning) return false;
-
-  const fromPage = clampPage(currentPage);
   const toPage = clampPage(targetPage);
 
-  if (fromPage === toPage) return false;
+  if (toPage === currentPage) return false;
 
-  const fromWrapper = getPageWrapper(fromPage);
   const toWrapper = getPageWrapper(toPage);
-
-  if (!fromWrapper || !toWrapper) return false;
+  if (!toWrapper) return false;
 
   if (!renderedPages.has(toPage)) {
     await renderPage(toPage);
   }
 
-  const direction = options.direction || (toPage > fromPage ? 1 : -1);
-
-  const oldScrollTop = readerContainer.scrollTop;
   let newScrollTop = toWrapper.offsetTop;
 
-  // paged fit width 往上翻到前一頁時，應該落在前一頁底部附近
-  if (readerMode === 'paged' && pageFitMode === 'width' && direction < 0) {
+  if (
+    readerMode === 'paged' &&
+    pageFitMode === 'width' &&
+    options.direction < 0
+  ) {
     newScrollTop = Math.max(
       toWrapper.offsetTop,
       toWrapper.offsetTop + toWrapper.offsetHeight - readerContainer.clientHeight
     );
   }
 
-  const fromTopInViewport = fromWrapper.offsetTop - oldScrollTop;
-  const toTopInViewport = toWrapper.offsetTop - newScrollTop;
-
-  const viewportHeight = readerContainer.clientHeight;
-
-  const layer = createPagedTransitionLayer();
-  const fromClone = cloneWrapperForTransition(fromWrapper, fromTopInViewport);
-  const toClone = cloneWrapperForTransition(toWrapper, toTopInViewport);
-
-  const enterOffset = direction > 0 ? viewportHeight : -viewportHeight;
-  const exitOffset = direction > 0 ? -viewportHeight : viewportHeight;
-
-  toClone.style.transform = `translateY(${enterOffset}px)`;
-
-  layer.appendChild(fromClone);
-  layer.appendChild(toClone);
-  readerContainer.appendChild(layer);
-
-  isPagedTransitionRunning = true;
   suppressScrollSync = true;
   suppressNextScrollPageSync = true;
 
-  // 真正內容先直接跳到目標位置
+  currentPage = toPage;
+
   readerContainer.scrollTo({
     top: newScrollTop,
     behavior: 'auto',
   });
 
-  currentPage = toPage;
   updatePageIndicator();
 
-  await new Promise((resolve) => {
-    requestAnimationFrame(() => {
-      fromClone.style.transition = 'transform 180ms ease, opacity 180ms ease';
-      toClone.style.transition = 'transform 180ms ease, opacity 180ms ease';
-
-      fromClone.style.transform = `translateY(${exitOffset}px)`;
-      fromClone.style.opacity = '0.92';
-
-      toClone.style.transform = 'translateY(0)';
-      toClone.style.opacity = '1';
-
-      const cleanup = () => {
-        layer.remove();
-        suppressScrollSync = false;
-        isPagedTransitionRunning = false;
-        resolve();
-      };
-
-      toClone.addEventListener('transitionend', cleanup, { once: true });
-
-      setTimeout(() => {
-        if (isPagedTransitionRunning) {
-          layer.remove();
-          suppressScrollSync = false;
-          isPagedTransitionRunning = false;
-          resolve();
-        }
-      }, 260);
-    });
+  requestAnimationFrame(() => {
+    suppressScrollSync = false;
   });
 
   return true;
@@ -2222,6 +2393,8 @@ async function initReader() {
 
   await loadReaderSettings();
   await loadCurrentBookTags();
+  loadBookmarkPages();
+  setupBookmarkUi();
 
   try {
     const lowerPath = filePath.toLowerCase();
@@ -2783,41 +2956,17 @@ window.addEventListener('resize', () => {
 
       await waitForViewerSizeToStabilize();
 
+      clearPdfCache();
+      clearCbzCache();
+      renderedPages.clear();
+
       if (isSelectablePdfMode()) {
-        clearPdfCache();
         pdfTextMapByPage.clear();
         clearCustomPdfSelection();
-        await renderDocumentStructure(anchorPage);
-        return;
       }
 
-      updateVisibleCanvasDisplaySizes();
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-
-      // 若目前頁附近有尚未渲染頁，再補 render
-      const pagesToEnsure = new Set([
-        clampPage(anchorPage),
-        clampPage(anchorPage - 1),
-        clampPage(anchorPage + 1),
-      ]);
-
-      for (const pageNumber of pagesToEnsure) {
-        if (pageNumber < 1 || pageNumber > totalPages) continue;
-
-        if (!renderedPages.has(pageNumber)) {
-          await renderPage(pageNumber);
-        }
-      }
-
-      await jumpToPage(anchorPage, {
-        updateIndicator: true,
-        forceInstant: true,
-        animatePagedTurn: false,
-      });
-
-      requestAnimationFrame(() => {
-        suppressScrollSync = false;
-      });
+      await renderDocumentStructure(anchorPage);
+      return;
     } catch (error) {
       console.error('resize 處理失敗:', error);
       suppressScrollSync = false;

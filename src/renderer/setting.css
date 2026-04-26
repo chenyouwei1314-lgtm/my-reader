@@ -814,3 +814,11 @@ input[type="range"]::-moz-range-thumb {
   fill: currentColor;
   flex: 0 0 auto;
 }
+
+.bookmark-command-left .bookmark-command-icon {
+  transform: rotate(-45deg);
+}
+
+.bookmark-command-right .bookmark-command-icon {
+  transform: rotate(45deg);
+}
