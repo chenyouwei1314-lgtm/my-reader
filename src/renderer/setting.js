@@ -451,12 +451,12 @@ function renderLibrarySection() {
           class="settings-input settings-control"
           type="text"
           maxlength="120"
-          placeholder="未填寫時顯示完整路徑"
+          placeholder="輸入書庫名稱"
           value="${settings.displayLibraryName || ''}"
         >
       </div>
       <div class="settings-hint" id="display-library-name-hint">
-        輸入書庫名稱，於書庫左上角顯示：${getDisplayLibraryName()}
+        自訂書庫名稱，於書庫左上角顯示：${getDisplayLibraryName()}
       </div>
     </div>
 
