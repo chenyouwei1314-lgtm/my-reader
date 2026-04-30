@@ -43,6 +43,12 @@ contextBridge.exposeInMainWorld('readerAPI', {
 
   clearAllReadingProgress: () => ipcRenderer.invoke('clear-all-reading-progress'),
 
+  onLibraryFolderChanged: (callback) => {
+    ipcRenderer.on('library-folder-changed', (_event, payload) => {
+      callback(payload);
+    });
+  },
+
   onBookTagsUpdated: (callback) => {
     ipcRenderer.on('book-tags-updated', (_event, payload) => {
       callback(payload);

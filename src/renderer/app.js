@@ -54,6 +54,7 @@ let isFullscreen = false;
 let visibleCoverLoadTimer = null;
 let recentReadingResizeTimer = null;
 let bookGridResizeObserver = null;
+let libraryAutoRefreshTimer = null;
 
 let appSettings = {
   displayLibraryName: '',
@@ -1525,6 +1526,20 @@ window.readerAPI?.onReadingProgressUpdated?.(async ({ filePath, record }) => {
   }
 
   await rerenderBookGridIfSortAffected();
+});
+
+window.readerAPI?.onLibraryFolderChanged?.(() => {
+  if (!currentLibraryPath) {
+    return;
+  }
+
+  if (libraryAutoRefreshTimer) {
+    clearTimeout(libraryAutoRefreshTimer);
+  }
+
+  libraryAutoRefreshTimer = setTimeout(async () => {
+    await refreshLibrary({ scrollToSelected: false });
+  }, 800);
 });
 
 window.readerAPI?.onAllReadingProgressCleared?.(async () => {

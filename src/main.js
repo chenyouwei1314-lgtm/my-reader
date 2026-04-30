@@ -7,6 +7,9 @@ const { DEFAULT_THEME, normalizeThemeColor } = require('./renderer/theme');
 // ===== 視窗狀態 =====
 let mainWindow = null;
 let readerWindow = null;
+let libraryWatcher = null;
+let libraryWatchTimer = null;
+let watchedLibraryPath = '';
 
 // ===== 基本工具函式 =====
 /**
@@ -793,6 +796,78 @@ function clearRecentReading() {
   return true;
 }
 
+/**
+ * 停止監控目前書庫資料夾
+ */
+function stopLibraryWatcher() {
+  if (libraryWatcher) {
+    libraryWatcher.close();
+    libraryWatcher = null;
+  }
+
+  watchedLibraryPath = '';
+
+  if (libraryWatchTimer) {
+    clearTimeout(libraryWatchTimer);
+    libraryWatchTimer = null;
+  }
+}
+
+/**
+ * 判斷變動檔案是否可能是書籍
+ */
+function isSupportedBookChange(fileName) {
+  if (!fileName) return false;
+
+  return isSupportedBook(fileName);
+}
+
+/**
+ * 開始監控目前書庫資料夾
+ */
+function startLibraryWatcher(folderPath) {
+  if (!folderPath || !fs.existsSync(folderPath)) {
+    stopLibraryWatcher();
+    return;
+  }
+
+  if (watchedLibraryPath === folderPath && libraryWatcher) {
+    return;
+  }
+
+  stopLibraryWatcher();
+
+  watchedLibraryPath = folderPath;
+
+  try {
+    libraryWatcher = fs.watch(folderPath, (eventType, fileName) => {
+      if (!isSupportedBookChange(fileName)) {
+        return;
+      }
+
+      if (libraryWatchTimer) {
+        clearTimeout(libraryWatchTimer);
+      }
+
+      // 延遲一點再通知，避免檔案還在複製中就掃描
+      libraryWatchTimer = setTimeout(() => {
+        if (!mainWindow || mainWindow.isDestroyed()) {
+          return;
+        }
+
+        mainWindow.webContents.send('library-folder-changed', {
+          folderPath,
+          eventType,
+          fileName,
+        });
+      }, 600);
+    });
+  } catch (error) {
+    console.error('監控書庫資料夾失敗:', error);
+    stopLibraryWatcher();
+  }
+}
+
 // ===== 書庫掃描 =====
 /**
  * 掃描指定資料夾，回傳書籍列表
@@ -805,6 +880,7 @@ async function scanLibrary(folderPath) {
   saveLastLibraryFolder(folderPath);
   pushLibraryHistory(folderPath);
   ensureMyReaderDirs(folderPath);
+  startLibraryWatcher(folderPath);
 
   const existingIndex = loadLibraryIndex(folderPath);
   const existingMap = new Map(existingIndex.map((item) => [item.filePath, item]));
@@ -1328,6 +1404,8 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
+  stopLibraryWatcher();
+
   if (process.platform !== 'darwin') {
     app.quit();
   }
