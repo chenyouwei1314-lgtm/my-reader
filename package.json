@@ -40,5 +40,24 @@
     "jszip": "^3.10.1",
     "pdfjs-dist": "^5.6.205",
     "pngjs": "^7.0.0"
+  },
+  "build": {
+    "win": {
+      "icon": "src/icon.ico"
+    },
+    "fileAssociations": [
+      {
+        "ext": "pdf",
+        "name": "AirWei PDF Document",
+        "description": "PDF document opened by AirWei Reader",
+        "icon": "src/icon_airwei_pdf_white.ico"
+      },
+      {
+        "ext": "cbz",
+        "name": "AirWei Comic Book Archive",
+        "description": "CBZ comic book opened by AirWei Reader",
+        "icon": "src/icon_airwei_cbz_black.ico"
+      }
+    ]
   }
 }

@@ -1022,6 +1022,38 @@ function createReaderWindow(filePath, title) {
   });
 }
 
+function openBookFileDirectly(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) {
+    return false;
+  }
+
+  const fileName = path.basename(filePath);
+
+  if (!isSupportedBook(fileName)) {
+    return false;
+  }
+
+  const title = getBookTitle(fileName);
+
+  // 讓直接從本機開啟時，也會記錄最近閱讀與開始閱讀狀態
+  recordRecentReading(filePath);
+  markBookAsStarted(filePath);
+
+  createReaderWindow(filePath, title);
+  return true;
+}
+
+function getBookPathFromArgv(argv) {
+  const args = Array.isArray(argv) ? argv : [];
+
+  return args.find((arg) => {
+    if (!arg || typeof arg !== 'string') return false;
+    if (!fs.existsSync(arg)) return false;
+
+    return isSupportedBook(path.basename(arg));
+  }) || '';
+}
+
 // ===== 自訂 protocol =====
 protocol.registerSchemesAsPrivileged([
   {
@@ -1391,10 +1423,40 @@ function registerAllIpcHandlers() {
 }
 
 // ===== App 生命週期 =====
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (_event, argv) => {
+    const bookPath = getBookPathFromArgv(argv);
+
+    if (bookPath) {
+      openBookFileDirectly(bookPath);
+      return;
+    }
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+      }
+
+      mainWindow.focus();
+    }
+  });
+}
+
 app.whenReady().then(() => {
   registerMyReaderProtocol();
-  createWindow();
   registerAllIpcHandlers();
+
+  const startupBookPath = getBookPathFromArgv(process.argv);
+
+  if (startupBookPath) {
+    openBookFileDirectly(startupBookPath);
+  } else {
+    createWindow();
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
