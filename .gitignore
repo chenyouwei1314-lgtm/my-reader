@@ -95,6 +95,7 @@ dist/
 
 # Electron-builder generated files
 *.blockmap
+*.pdb
 
 # Local installer/package outputs
 *.exe
