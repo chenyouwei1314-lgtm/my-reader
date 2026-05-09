@@ -815,6 +815,11 @@ input[type="range"]::-moz-range-thumb {
   flex: 0 0 auto;
 }
 
+.bookmark-command-icon {
+  width: 14px;
+  height: 14px;
+}
+
 .bookmark-command-left .bookmark-command-icon {
   transform: rotate(-45deg);
 }
