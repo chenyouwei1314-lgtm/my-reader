@@ -88,5 +88,16 @@ typings/
 # Vite
 .vite/
 
-# Electron-Forge
+# Electron build outputs
+.webpack/
 out/
+dist/
+
+# Electron-builder generated files
+*.blockmap
+
+# Local installer/package outputs
+*.exe
+*.msi
+*.zip
+*.7z

@@ -1,16 +1,17 @@
 {
-  "name": "AirWei Reader",
+  "name": "airwei-reader",
   "productName": "AirWei Reader",
   "version": "1.0.0",
   "description": "My Electron application description",
-  "main": ".webpack/main",
+  "main": ".webpack/x64/main/index.js",
   "private": true,
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "echo \"No linting configured\""
+    "lint": "echo \"No linting configured\"",
+    "dist": "electron-forge package && electron-builder"
   },
   "keywords": [],
   "author": {
@@ -31,6 +32,7 @@
     "@vercel/webpack-asset-relocator-loader": "^1.7.3",
     "css-loader": "^6.11.0",
     "electron": "41.1.1",
+    "electron-builder": "^26.8.1",
     "node-loader": "^2.1.0",
     "style-loader": "^3.3.4"
   },
@@ -42,21 +44,66 @@
     "pngjs": "^7.0.0"
   },
   "build": {
+    "appId": "com.airwei.reader",
+    "productName": "AirWei Reader",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      {
+        "from": ".webpack/x64",
+        "to": ".webpack/x64",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "src",
+        "to": "src",
+        "filter": [
+          "**/*"
+        ]
+      },
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "extraResources/thumbnail-provider",
+        "to": "thumbnail-provider"
+      }
+    ],
     "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "src/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": true,
+      "allowElevation": true,
+      "include": "installer/installer.nsh"
     },
     "fileAssociations": [
       {
         "ext": "pdf",
         "name": "AirWei PDF Document",
         "description": "PDF document opened by AirWei Reader",
-        "icon": "src/icon_airwei_pdf_white.ico"
+        "icon": "src/icon_airwei_pdf_white.ico",
+        "role": "Viewer"
       },
       {
         "ext": "cbz",
         "name": "AirWei Comic Book Archive",
         "description": "CBZ comic book opened by AirWei Reader",
-        "icon": "src/icon_airwei_cbz_black.ico"
+        "icon": "src/icon_airwei_cbz_black.ico",
+        "role": "Viewer"
       }
     ]
   }
