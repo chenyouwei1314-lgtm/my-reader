@@ -170,23 +170,20 @@ body {
 }
 
 .toolbar-page-indicator {
-  padding: 0 12px;
   text-align: center;
-  border-radius: 10px;
   color: var(--theme-text);
   font-size: 14px;
   outline: none;
 }
 
 .toolbar-page-indicator.editing {
-  border-color: var(--theme-accent);
-  background: rgba(255, 255, 255, 0.12);
+  background: transparent;
 }
 
 .page-indicator-bookmark-wrap {
   min-width: 100px;
-  width: 140px;
   height: 30px;
+  padding: 0 4px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -194,15 +191,19 @@ body {
   border-radius: 10px;
   border: 1px solid var(--theme-input-border);
   background: var(--theme-surface-bg);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.page-indicator-bookmark-wrap:focus-within {
+  border-color: var(--theme-accent);
+  background: var(--theme-surface-bg-strong);
 }
 
 .page-indicator-bookmark-wrap .toolbar-page-indicator {
-  width: 80px;
-  min-width: 80px;
+  width: 98px;
+  min-width: 98px;
   height: 30px;
-  padding: 0 4px;
   border: none;
-  border-radius: 0;
   background: transparent;
 }
 
@@ -225,8 +226,8 @@ body {
 }
 
 .page-bookmark-nav-icon {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
 }
 
 .page-bookmark-nav-left .page-bookmark-nav-icon {

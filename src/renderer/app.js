@@ -41,6 +41,9 @@ applyAppTheme(document.documentElement, initialTheme);
 // ===== DOM 元素 =====
 const settingsBtn = document.getElementById('settings-btn');
 const fullscreenBtn = document.getElementById('fullscreen-btn');
+const bookSearchInput = document.getElementById('book-search-input');
+const bookSearchClearBtn = document.getElementById('book-search-clear-btn');
+const bookSearchIconPath = document.getElementById('book-search-icon-path');
 const libraryPathText = document.getElementById('library-path-text');
 const librarySection = document.querySelector('.library-section');
 const bookGrid = document.getElementById('book-grid');
@@ -51,6 +54,8 @@ let currentLibraryPath = '';
 let books = [];
 let selectedBookId = null;
 let isFullscreen = false;
+let bookSearchKeyword = '';
+let selectedBookIdBeforeSearch = null;
 let visibleCoverLoadTimer = null;
 let recentReadingResizeTimer = null;
 let bookGridResizeObserver = null;
@@ -366,6 +371,126 @@ function getSortedBooks() {
 
     return compareBookTitle(a, b);
   });
+}
+
+// ===== 書籍搜尋工具 =====
+function normalizeBookSearchText(text) {
+  return (text || '')
+    .toLowerCase()
+    .trim();
+}
+
+function hasBookSearchKeyword() {
+  return normalizeBookSearchText(bookSearchKeyword) !== '';
+}
+
+function getSearchMatchedBooks() {
+  const sortedBooks = getSortedBooks();
+  const keyword = normalizeBookSearchText(bookSearchKeyword);
+
+  if (!keyword) {
+    return sortedBooks;
+  }
+
+  return sortedBooks.filter((book) => {
+    const title = normalizeBookSearchText(book.title);
+    return title.includes(keyword);
+  });
+}
+
+function updateBookSearchIcon() {
+  if (!bookSearchClearBtn || !bookSearchIconPath) return;
+
+  if (hasBookSearchKeyword()) {
+    bookSearchClearBtn.title = '清除搜尋';
+    bookSearchClearBtn.setAttribute('aria-label', '清除搜尋');
+
+    bookSearchIconPath.setAttribute(
+      'd',
+      'm256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z'
+    );
+
+    return;
+  }
+
+  bookSearchClearBtn.title = '搜尋';
+  bookSearchClearBtn.setAttribute('aria-label', '搜尋');
+
+  bookSearchIconPath.setAttribute(
+    'd',
+    'M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z'
+  );
+}
+
+async function applyBookSearchKeyword(nextKeyword) {
+  const wasSearching = hasBookSearchKeyword();
+
+  bookSearchKeyword = nextKeyword || '';
+
+  const isSearching = hasBookSearchKeyword();
+
+  if (!wasSearching && isSearching) {
+    selectedBookIdBeforeSearch = selectedBookId;
+  }
+
+  const matchedBooks = getSearchMatchedBooks();
+
+  if (isSearching) {
+    selectedBookId = matchedBooks.length > 0 ? matchedBooks[0].id : null;
+  } else if (
+    selectedBookIdBeforeSearch &&
+    books.some((book) => book.id === selectedBookIdBeforeSearch)
+  ) {
+    selectedBookId = selectedBookIdBeforeSearch;
+    selectedBookIdBeforeSearch = null;
+  } else if (
+    books.length > 0 &&
+    !books.some((book) => book.id === selectedBookId)
+  ) {
+    selectedBookId = books[0].id;
+    selectedBookIdBeforeSearch = null;
+  }
+
+  updateBookSearchIcon();
+
+  await renderBookGrid();
+  await applyPageBackground();
+
+  if (selectedBookId) {
+    scrollSelectedBookToTopAfterLayout();
+  }
+}
+
+async function clearBookSearch() {
+  bookSearchKeyword = '';
+
+  if (bookSearchInput) {
+    bookSearchInput.value = '';
+    bookSearchInput.focus();
+  }
+
+  if (
+    selectedBookIdBeforeSearch &&
+    books.some((book) => book.id === selectedBookIdBeforeSearch)
+  ) {
+    selectedBookId = selectedBookIdBeforeSearch;
+  } else if (
+    books.length > 0 &&
+    !books.some((book) => book.id === selectedBookId)
+  ) {
+    selectedBookId = books[0].id;
+  }
+
+  selectedBookIdBeforeSearch = null;
+
+  updateBookSearchIcon();
+
+  await renderBookGrid();
+  await applyPageBackground();
+
+  if (selectedBookId) {
+    scrollSelectedBookToTopAfterLayout();
+  }
 }
 
 // ===== 背景工具 =====
@@ -1116,11 +1241,15 @@ async function setBookFavorite(bookId, isFavorite) {
  * 這個函式只在重新掃描或排序可能改變時重建
  */
 async function renderBookGrid() {
-  const sortedBooks = getSortedBooks();
+  const sortedBooks = getSearchMatchedBooks();
 
   if (sortedBooks.length === 0) {
-    bookGrid.innerHTML = `<div>此資料夾內沒有 cbz 或 pdf</div>`;
+    bookGrid.innerHTML = hasBookSearchKeyword()
+      ? `<div class="search-empty-message">沒有符合搜尋條件的書籍</div>`
+      : `<div>此資料夾內沒有 cbz 或 pdf</div>`;
+
     renderDetailPanel();
+    await renderRecentReadingSection();
     return;
   }
 
@@ -1288,7 +1417,7 @@ function scrollSelectedBookToTopAfterLayout() {
  * 延後載入剩餘封面
  */
 function lazyLoadRemainingCovers() {
-  const sortedBooks = getSortedBooks();
+  const sortedBooks = getSearchMatchedBooks();
   let index = 0;
 
   function processNext() {
@@ -1482,6 +1611,32 @@ fullscreenBtn?.addEventListener('click', async () => {
   updateFullscreenButton();
 });
 
+bookSearchInput?.addEventListener('input', async (event) => {
+  await applyBookSearchKeyword(event.target.value);
+});
+
+bookSearchInput?.addEventListener('keydown', async (event) => {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    await clearBookSearch();
+    return;
+  }
+
+  if (event.key === 'Enter' && selectedBookId) {
+    event.preventDefault();
+    openReader(selectedBookId);
+  }
+});
+
+bookSearchClearBtn?.addEventListener('click', async () => {
+  if (hasBookSearchKeyword()) {
+    await clearBookSearch();
+    return;
+  }
+
+  bookSearchInput?.focus();
+});
+
 window.addEventListener('keydown', leaveFullscreenIfNeeded);
 
 window.addEventListener('focus', async () => {
@@ -1584,6 +1739,7 @@ window.addEventListener('resize', () => {
 // ===== 初始化 =====
 async function initApp() {
   updateFullscreenButton();
+  updateBookSearchIcon();
   await loadAppSettings();
   await restoreLastLibrary();
   await applyPageBackground();

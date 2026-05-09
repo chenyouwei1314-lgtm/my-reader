@@ -71,7 +71,6 @@ html, body {
 }
 
 button {
-  padding: 5px 16px;
   border-radius: 10px;
   cursor: pointer;
   background: var(--theme-accent);
@@ -113,6 +112,70 @@ button:hover {
   height: 24px;
   display: block;
   flex-shrink: 0;
+}
+
+/* ===== toolbar 搜尋框：仿 reader.html 的 toolbar-page-indicator 形式 ===== */
+.toolbar-search-wrap {
+  height: 30px;
+  min-width: 140px;
+  padding: 0 4px 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-bg);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.toolbar-search-wrap:focus-within {
+  border-color: var(--theme-accent);
+  background: var(--theme-surface-bg-strong);
+}
+
+.toolbar-search-input {
+  width: 158px;
+  min-width: 158px;
+  height: 30px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--theme-text);
+  font-size: 14px;
+  text-align: left;
+}
+
+.toolbar-search-input::placeholder {
+  color: var(--theme-muted-text);
+}
+
+.toolbar-search-icon-btn {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  border: none;
+  border-radius: 50px;
+  background: transparent;
+  color: var(--theme-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.toolbar-search-icon-btn:hover {
+  background: color-mix(in srgb, var(--theme-surface-bg) 100%, transparent);
+}
+
+.toolbar-search-svg {
+  width: 20px;
+  height: 20px;
+}
+
+.search-empty-message {
+  color: var(--theme-muted-text);
+  font-size: 16px;
 }
 
 /* ===== 書庫主版面 ===== */
