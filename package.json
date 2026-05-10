@@ -72,6 +72,16 @@
         "to": "thumbnail-provider"
       }
     ],
+    "extraFiles": [
+      {
+        "from": "extraResources/launchers",
+        "to": ".",
+        "filter": [
+          "*.exe",
+          "*.config"
+        ]
+      }
+    ],
     "win": {
       "target": [
         {
