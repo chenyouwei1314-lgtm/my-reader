@@ -8,12 +8,12 @@
 
   WriteRegStr HKCR ".cbz" "" "AirWeiReader.CBZ"
   WriteRegStr HKCR "AirWeiReader.CBZ" "" "AirWei Comic Book Archive"
-  WriteRegStr HKCR "AirWeiReader.CBZ\DefaultIcon" "" "$INSTDIR\resources\thumbnail-provider\AirWeiThumbnailProvider.dll,0"
+  WriteRegStr HKCR "AirWeiReader.CBZ\DefaultIcon" "" "$INSTDIR\resources\thumbnail-provider\icon_airwei_cbz_black.ico,0"
   WriteRegStr HKCR "AirWeiReader.CBZ\shell\open\command" "" '"$INSTDIR\AirWei Reader.exe" "%1"'
 
   WriteRegStr HKCR ".pdf" "" "AirWeiReader.PDF"
   WriteRegStr HKCR "AirWeiReader.PDF" "" "AirWei PDF Document"
-  WriteRegStr HKCR "AirWeiReader.PDF\DefaultIcon" "" "$INSTDIR\resources\thumbnail-provider\AirWeiThumbnailProvider.dll,0"
+  WriteRegStr HKCR "AirWeiReader.PDF\DefaultIcon" "" "$INSTDIR\resources\thumbnail-provider\icon_airwei_pdf_white.ico,0"
   WriteRegStr HKCR "AirWeiReader.PDF\shell\open\command" "" '"$INSTDIR\AirWei Reader.exe" "%1"'
 
   ExecWait 'ie4uinit.exe -show'
