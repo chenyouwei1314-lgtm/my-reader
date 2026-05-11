@@ -1,34 +1,40 @@
-# 📖 My Reader
+# 📖 AirWei Reader
 
-An Electron-based PDF/CBZ reader with smooth page navigation and customizable UI.
+AirWei Reader is a personal Electron-based PDF / CBZ reader designed for smooth reading, customizable appearance, and local library management.
 
----
-
-## 🚀 Features
-
-- 📄 Support for PDF and CBZ formats
-- 🔄 Paged mode (slide-like navigation)
-- 📜 Scroll mode (continuous reading)
-- 🔍 Fit width / Fit height switching
-- 🔁 Auto loop playback (like Acrobat Reader)
-- 🎨 Customizable theme system
-- ⚡ Optimized rendering performance
+It supports PDF documents and CBZ comic archives, with reading progress tracking, favorites, recent reading, custom themes, and Windows file association support.
 
 ---
 
-## 🛠 Tech Stack
+## ✨ Features
 
-- Electron
-- JavaScript (Vanilla)
-- HTML / CSS
-- pdf.js
+- 📄 Support for PDF and CBZ files
+- 🖼️ Library view with cover display
+- 📚 Recent reading list
+- ❤️ Favorite books
+- 🔖 Page bookmark support
+- 📍 Reading progress tracking
+- ↔️ Fit width / fit height switching
+- 📖 Paged mode and scroll mode
+- 🔁 Auto loop playback
+- 🎨 Custom theme color and light / dark appearance
+- 🖼️ Optional background image or selected book cover background
+- 🖱️ Custom page turning commands
+- 🖥️ Multi-monitor friendly window position memory
+- 🔙 Reader window can return to the library window
+- 🧩 PDF / CBZ file association support on Windows
+- 🎯 Separate PDF and CBZ launcher icons
 
 ---
 
-## 📦 Installation
+## 📥 Download
 
-```bash
-git clone https://github.com/chenyouwei1314-lgtm/my-reader.git
-cd my-reader
-npm install
-npm start
+Download the latest installer from the **Releases** page:
+
+👉 [GitHub Releases](https://github.com/chenyouwei1314-lgtm/my-reader/releases)
+
+For most users, download:
+
+```text
+AirWei Reader Setup x.x.x.exe
+```
