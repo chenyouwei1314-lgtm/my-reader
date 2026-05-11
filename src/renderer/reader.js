@@ -2590,11 +2590,20 @@ document.addEventListener('mousedown', (event) => {
 backBtn?.addEventListener('click', async () => {
   try {
     await saveReadingProgress();
+
+    if (window.readerAPI?.saveLastSelectedBook && currentFilePath) {
+      await window.readerAPI.saveLastSelectedBook(currentFilePath);
+    }
   } catch (error) {
-    console.error('關閉前儲存閱讀進度失敗:', error);
+    console.error('返回書庫前儲存狀態失敗:', error);
   }
 
-  window.close();
+  if (window.readerAPI?.returnToLibrary) {
+    await window.readerAPI.returnToLibrary();
+    return;
+  }
+
+  window.location.href = './index.html';
 });
 
 favoriteBtn?.addEventListener('click', async () => {

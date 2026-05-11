@@ -10,13 +10,29 @@
   --myreader-scrollbar-thumb: #666666;
   --myreader-scrollbar-thumb-hover: #666666;
   --myreader-scrollbar-border: rgba(255, 255, 255, 0.08);
+
   --reader-toolbar-height: 50px;
+
   --theme-accent: #666666;
-  --theme-app-bg: #050505;
+  --theme-app-bg: #111111;
   --theme-text: #ffffff;
-  --theme-toolbar-bg: rgba(10, 10, 10, 0.35);
-  --theme-button-text: #ffffff;
+  --theme-muted-text: #d0d0d0;
+  --theme-panel-bg: rgba(18, 18, 18, 0.96);
+  --theme-surface-bg: rgba(255, 255, 255, 0.08);
+  --theme-surface-bg-strong: rgba(255, 255, 255, 0.12);
   --theme-border: rgba(255, 255, 255, 0.08);
+  --theme-toolbar-bg: rgba(20, 20, 20, 0.95);
+  --theme-input-bg: rgba(255, 255, 255, 0.08);
+  --theme-input-border: rgba(255, 255, 255, 0.20);
+  --theme-button-text: #ffffff;
+
+  --theme-favorite: #ff4f9a;
+  --theme-pdf-page-bg: #ffffff;
+  --theme-selection-bg: rgba(70, 110, 255, 0.32);
+
+  --settings-control-width: 490px;
+  --settings-group-gap: 10px;
+  --settings-section-gap: 30px;
 }
 
 html,
@@ -150,13 +166,13 @@ body {
 }
 
 .favorite-toolbar-btn {
-  background: color-mix(in srgb, #ff4f9a 40%, transparent);
-  color: #ff4f9a;
+  background: color-mix(in srgb, var(--theme-favorite) 40%, transparent);
+  color: var(--theme-favorite);
 }
 
 .favorite-toolbar-btn.active {
-  background: color-mix(in srgb, #ff4f9a 16%, transparent);
-  color: #ff4f9a;
+  background: color-mix(in srgb, var(--theme-favorite) 16%, transparent);
+  color: var(--theme-favorite);
 }
 
 .bookmark-toolbar-btn {
@@ -354,13 +370,13 @@ body {
   max-width: 100%;
   max-height: none;
   border-radius: 0;
-  background: #fff;
+  background: var(--theme-pdf-page-bg);
 }
 
 .pdf-selectable-layer {
   position: relative;
   flex: 0 0 auto;
-  background: #fff;
+  background: var(--theme-pdf-page-bg);
   line-height: normal;
 }
 
@@ -380,7 +396,7 @@ body {
 
 .pdf-selection-rect {
   position: absolute;
-  background: rgba(70, 110, 255, 0.32);
+  background: var(--theme-selection-bg);
   pointer-events: none;
 }
 
@@ -408,7 +424,7 @@ body {
 }
 
 .pdf-copy-popover.copied {
-  background: rgba(60, 60, 60, 0.96);
+  background: var(--theme-surface-bg-strong);
 }
 
 /* fit width 時，讓內容寬度貼齊容器，實際高度由 JS 決定 */
@@ -428,7 +444,7 @@ body {
 .pdf-loading {
   padding: 40px 0;
   text-align: center;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--theme-text);
 }
 
 /* =========================================================

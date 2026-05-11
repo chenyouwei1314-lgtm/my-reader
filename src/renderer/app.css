@@ -21,16 +21,29 @@ html, body {
   --myreader-scrollbar-thumb: #666666;
   --myreader-scrollbar-thumb-hover: #666666;
   --myreader-scrollbar-border: rgba(255, 255, 255, 0.08);
+
+  --reader-toolbar-height: 50px;
+
   --theme-accent: #666666;
   --theme-app-bg: #111111;
   --theme-text: #ffffff;
   --theme-muted-text: #d0d0d0;
   --theme-panel-bg: rgba(18, 18, 18, 0.96);
-  --theme-surface-bg: rgba(255, 255, 255, 0.06);
+  --theme-surface-bg: rgba(255, 255, 255, 0.08);
   --theme-surface-bg-strong: rgba(255, 255, 255, 0.12);
   --theme-border: rgba(255, 255, 255, 0.08);
   --theme-toolbar-bg: rgba(20, 20, 20, 0.95);
+  --theme-input-bg: rgba(255, 255, 255, 0.08);
+  --theme-input-border: rgba(255, 255, 255, 0.20);
   --theme-button-text: #ffffff;
+
+  --theme-favorite: #ff4f9a;
+  --theme-pdf-page-bg: #ffffff;
+  --theme-selection-bg: rgba(70, 110, 255, 0.32);
+
+  --settings-control-width: 490px;
+  --settings-group-gap: 10px;
+  --settings-section-gap: 30px;
 }
 
 #app {
@@ -250,7 +263,11 @@ button:hover {
 .detail-cover{
   width: 100%;
   aspect-ratio: 1269 / 1800;
-  background: linear-gradient(135deg, #2a2a2a, #3f3f3f);
+  background: linear-gradient(
+    135deg,
+    var(--theme-surface-bg),
+    var(--theme-surface-bg-strong)
+  );
   display: flex;
   align-items: center;
   justify-content: center;
@@ -279,8 +296,8 @@ button:hover {
 }
 
 .book-card.favorite .book-title {
-  background: #ff4f9a;
-  color: #fff;
+  background: var(--theme-favorite);
+  color: #ffffff;
 }
 
 /* ===== 右側詳細資訊欄 ===== */
@@ -354,15 +371,15 @@ button:hover {
 .favorite-btn {
   height: 40px;
   min-width: 50px;
-  background: color-mix(in srgb, #ff4f9a 40%, transparent);
-  color: #ff4f9a;
+  background: color-mix(in srgb, var(--theme-favorite) 40%, transparent);
+  color: var(--theme-favorite);
   font-size: 24px;
   line-height: 1;
 }
 
 .favorite-btn.active {
-  background: color-mix(in srgb, #ff4f9a 16%, transparent);
-  color: #ff4f9a;
+  background: color-mix(in srgb, var(--theme-favorite) 16%, transparent);
+  color: var(--theme-favorite);
 }
 
 .recent-reading-section {
@@ -452,11 +469,11 @@ button:hover {
 }
 
 .recent-book-card.favorite {
-  background: #ff4f9a;
+  background: var(--theme-favorite);
 }
 
 .recent-book-card.favorite .recent-book-title {
-  color: #fff;
+  color: #ffffff;
 }
 
 .recent-reading-divider {

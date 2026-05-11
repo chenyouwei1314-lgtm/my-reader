@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('readerAPI', {
   openSettingsPage: () => ipcRenderer.invoke('open-settings-page'),
   openLibraryPage: () => ipcRenderer.invoke('open-library-page'),
   openReaderWindow: (book) => ipcRenderer.invoke('open-reader-window', book),
+  returnToLibrary: () => ipcRenderer.invoke('return-to-library'),
 
   readPdfFile: (filePath) => ipcRenderer.invoke('read-pdf-file', filePath),
   readCbzFile: (filePath) => ipcRenderer.invoke('read-cbz-file', filePath),

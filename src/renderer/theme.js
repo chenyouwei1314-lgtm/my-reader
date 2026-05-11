@@ -73,6 +73,9 @@ function getThemePalette(themeName, accentColor) {
     toolbarBg: theme === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(10, 10, 10, 0.95)',
     inputBg: theme === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)',
     inputBorder: theme === 'light' ? 'rgba(0, 0, 0, 0.20)' : 'rgba(255, 255, 255, 0.20)',
+    favoriteColor: '#ff4f9a',
+    pdfPageBg: '#ffffff',
+    selectionBg: 'rgba(70, 110, 255, 0.32)',
   };
 }
 
@@ -98,6 +101,9 @@ function applyThemeToRoot(root, themeName, accentColor) {
   root.style.setProperty('--myreader-scrollbar-track', palette.scrollbarTrack);
   root.style.setProperty('--myreader-scrollbar-track-hover', palette.scrollbarTrackHover);
   root.style.setProperty('--myreader-scrollbar-border', palette.scrollbarBorder);
+  root.style.setProperty('--theme-favorite', palette.favoriteColor);
+  root.style.setProperty('--theme-pdf-page-bg', palette.pdfPageBg);
+  root.style.setProperty('--theme-selection-bg', palette.selectionBg);
 }
 
 function applyAppTheme(root, settings) {

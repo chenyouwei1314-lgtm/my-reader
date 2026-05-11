@@ -14,6 +14,8 @@
   --myreader-scrollbar-thumb-hover: #666666;
   --myreader-scrollbar-border: rgba(255, 255, 255, 0.08);
 
+  --reader-toolbar-height: 50px;
+
   --theme-accent: #666666;
   --theme-app-bg: #111111;
   --theme-text: #ffffff;
@@ -24,8 +26,12 @@
   --theme-border: rgba(255, 255, 255, 0.08);
   --theme-toolbar-bg: rgba(20, 20, 20, 0.95);
   --theme-input-bg: rgba(255, 255, 255, 0.08);
-  --theme-input-border: rgba(255, 255, 255, 0.14);
+  --theme-input-border: rgba(255, 255, 255, 0.20);
   --theme-button-text: #ffffff;
+
+  --theme-favorite: #ff4f9a;
+  --theme-pdf-page-bg: #ffffff;
+  --theme-selection-bg: rgba(70, 110, 255, 0.32);
 
   --settings-control-width: 490px;
   --settings-group-gap: 10px;
@@ -712,8 +718,8 @@ input[type="range"]::-moz-range-thumb {
   height: 34px;
   padding: 0 10px;
   border-radius: 10px;
-  background: rgba(25, 25, 25, 0.92);
-  color: #ffffff;
+  background: var(--theme-panel-bg);
+  color: var(--theme-text);
   font-size: 14px;
   line-height: 34px;
   text-align: center;
@@ -731,7 +737,7 @@ input[type="range"]::-moz-range-thumb {
   transform: translateX(-50%);
   width: 10px;
   height: 10px;
-  background: rgba(25, 25, 25, 0.92);
+  background: var(--theme-panel-bg);
   rotate: 45deg;
 }
 

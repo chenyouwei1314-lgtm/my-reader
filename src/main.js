@@ -1,8 +1,14 @@
-const { app, BrowserWindow, ipcMain, dialog, protocol } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, protocol, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { DEFAULT_THEME, normalizeThemeColor } = require('./renderer/theme');
+if (!app.isPackaged) {
+  app.setPath(
+    'userData',
+    path.join(app.getPath('userData'), 'dev')
+  );
+}
 
 // ===== 視窗狀態 =====
 let mainWindow = null;
@@ -264,6 +270,10 @@ function loadAppState() {
       libraryHistory: [],
       readingProgress: {},
       bookTags: {},
+      windowState: {
+        mainBounds: null,
+        mainIsMaximized: false,
+      },
       settings: {
         displayLibraryName: '',
         autoPlaySeconds: 5,
@@ -302,6 +312,10 @@ function loadAppState() {
       readingProgress: parsed.readingProgress || {},
       bookTags: parsed.bookTags || {},
       recentReading: Array.isArray(parsed.recentReading) ? parsed.recentReading : [],
+      windowState: {
+        mainBounds: normalizeWindowBounds(parsed.windowState?.mainBounds),
+        mainIsMaximized: parsed.windowState?.mainIsMaximized === true,
+      },
       settings: {
         displayLibraryName: parsed.settings?.displayLibraryName || '',
         autoPlaySeconds: Math.max(1, Number(parsed.settings?.autoPlaySeconds) || 5),
@@ -348,6 +362,10 @@ function loadAppState() {
       lastSelectedBookPath: '',
       readingProgress: {},
       bookTags: {},
+      windowState: {
+        mainBounds: null,
+        mainIsMaximized: false,
+      },
       settings: {
         displayLibraryName: '',
         autoPlaySeconds: 5,
@@ -377,6 +395,129 @@ function loadAppState() {
 function saveAppState(state) {
   const stateFilePath = getAppStateFilePath();
   fs.writeFileSync(stateFilePath, JSON.stringify(state, null, 2), 'utf-8');
+}
+
+// ===== 視窗位置狀態 =====
+function normalizeWindowBounds(bounds) {
+  if (!bounds || typeof bounds !== 'object') {
+    return null;
+  }
+
+  const x = Math.round(Number(bounds.x));
+  const y = Math.round(Number(bounds.y));
+  const width = Math.round(Number(bounds.width));
+  const height = Math.round(Number(bounds.height));
+
+  if (
+    !Number.isFinite(x) ||
+    !Number.isFinite(y) ||
+    !Number.isFinite(width) ||
+    !Number.isFinite(height) ||
+    width < 300 ||
+    height < 300
+  ) {
+    return null;
+  }
+
+  return { x, y, width, height };
+}
+
+function isBoundsOnAvailableDisplay(bounds) {
+  const safeBounds = normalizeWindowBounds(bounds);
+  if (!safeBounds) return false;
+
+  const centerX = safeBounds.x + safeBounds.width / 2;
+  const centerY = safeBounds.y + safeBounds.height / 2;
+
+  return screen.getAllDisplays().some((display) => {
+    const area = display.workArea;
+
+    return (
+      centerX >= area.x &&
+      centerX <= area.x + area.width &&
+      centerY >= area.y &&
+      centerY <= area.y + area.height
+    );
+  });
+}
+
+function getDefaultPrimaryDisplayBounds(width = 1400, height = 900) {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const area = primaryDisplay.workArea;
+
+  const safeWidth = Math.min(width, area.width);
+  const safeHeight = Math.min(height, area.height);
+
+  return {
+    x: Math.round(area.x + (area.width - safeWidth) / 2),
+    y: Math.round(area.y + (area.height - safeHeight) / 2),
+    width: safeWidth,
+    height: safeHeight,
+  };
+}
+
+function getSafeSavedMainWindowState() {
+  const state = loadAppState();
+  const bounds = normalizeWindowBounds(state.windowState?.mainBounds);
+
+  if (!bounds || !isBoundsOnAvailableDisplay(bounds)) {
+    return {
+      bounds: getDefaultPrimaryDisplayBounds(1400, 900),
+      isMaximized: false,
+    };
+  }
+
+  return {
+    bounds,
+    isMaximized: state.windowState?.mainIsMaximized === true,
+  };
+}
+
+function saveMainWindowState(win) {
+  if (!win || win.isDestroyed()) return;
+  if (win.isMinimized()) return;
+
+  const state = loadAppState();
+
+  state.windowState = {
+    mainBounds: normalizeWindowBounds(win.getBounds()),
+    mainIsMaximized: win.isMaximized(),
+  };
+
+  saveAppState(state);
+}
+
+function getMainWindowStateForNewWindow() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    return {
+      bounds: normalizeWindowBounds(mainWindow.getBounds()),
+      isMaximized: mainWindow.isMaximized(),
+    };
+  }
+
+  return getSafeSavedMainWindowState();
+}
+
+function bindMainWindowStateEvents(win) {
+  if (!win) return;
+
+  let saveTimer = null;
+
+  const scheduleSave = () => {
+    clearTimeout(saveTimer);
+
+    saveTimer = setTimeout(() => {
+      saveMainWindowState(win);
+    }, 250);
+  };
+
+  win.on('move', scheduleSave);
+  win.on('resize', scheduleSave);
+  win.on('maximize', scheduleSave);
+  win.on('unmaximize', scheduleSave);
+  win.on('close', () => {
+    saveMainWindowState(win);
+  });
 }
 
 // ===== 廣播事件 =====
@@ -936,9 +1077,11 @@ async function scanLibrary(folderPath) {
  * 建立主視窗
  */
 function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
+  const savedWindowState = getSafeSavedMainWindowState();
+
+  const mainWindowOptions = {
+    width: savedWindowState.bounds?.width || 1400,
+    height: savedWindowState.bounds?.height || 900,
     minWidth: 1000,
     minHeight: 750,
     autoHideMenuBar: true,
@@ -948,7 +1091,20 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
-  });
+  };
+
+  if (savedWindowState.bounds) {
+    mainWindowOptions.x = savedWindowState.bounds.x;
+    mainWindowOptions.y = savedWindowState.bounds.y;
+  }
+
+  mainWindow = new BrowserWindow(mainWindowOptions);
+
+  bindMainWindowStateEvents(mainWindow);
+
+  if (savedWindowState.isMaximized) {
+    mainWindow.maximize();
+  }
 
   // ===== CSP（目前保留註解，不啟用） =====
   // mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
@@ -971,6 +1127,9 @@ function createWindow() {
   const currentSettings = getAppSettings();
   const mainUrl = appendThemeQuery(MAIN_WINDOW_WEBPACK_ENTRY, currentSettings);
   mainWindow.loadURL(mainUrl);
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
 
   // mainWindow.webContents.openDevTools();
 }
@@ -982,9 +1141,12 @@ function createReaderWindow(filePath, title) {
   const encodedFilePath = encodeURIComponent(filePath);
   const encodedTitle = encodeURIComponent(title);
 
-  readerWindow = new BrowserWindow({
-    width: 1200,
-    height: 900,
+  const sourceWindowState = getMainWindowStateForNewWindow();
+  const sourceBounds = sourceWindowState.bounds;
+
+  const readerWindowOptions = {
+    width: sourceBounds?.width || 1200,
+    height: sourceBounds?.height || 900,
     minWidth: 900,
     minHeight: 700,
     autoHideMenuBar: true,
@@ -995,7 +1157,14 @@ function createReaderWindow(filePath, title) {
       contextIsolation: true,
       nodeIntegration: false,
     },
-  });
+  };
+
+  if (sourceBounds) {
+    readerWindowOptions.x = sourceBounds.x;
+    readerWindowOptions.y = sourceBounds.y;
+  }
+
+  readerWindow = new BrowserWindow(readerWindowOptions);
 
   const currentSettings = getAppSettings();
   const safeTheme =
@@ -1247,6 +1416,27 @@ function registerNavigationIpc() {
     const nextState = !win.isFullScreen();
     win.setFullScreen(nextState);
     return nextState;
+  });
+
+  ipcMain.handle('return-to-library', async (event) => {
+    const currentWindow = BrowserWindow.fromWebContents(event.sender);
+
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      createWindow();
+    }
+
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+
+    mainWindow.show();
+    mainWindow.focus();
+
+    if (currentWindow && !currentWindow.isDestroyed()) {
+      currentWindow.close();
+    }
+
+    return true;
   });
 }
 
