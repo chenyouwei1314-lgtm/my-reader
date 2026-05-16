@@ -67,7 +67,7 @@ button {
   cursor: pointer;
   background: var(--theme-accent);
   color: var(--theme-button-text);
-  transition: 0.2s ease;
+  transition: opacity 0.2s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;

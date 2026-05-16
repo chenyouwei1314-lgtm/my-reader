@@ -98,7 +98,7 @@ body {
   background: var(--theme-accent);
   color: var(--theme-button-text);
   cursor: pointer;
-  transition: 0.2s ease;
+  transition: opacity 0.2s ease;
 }
 
 .toolbar-btn:hover,

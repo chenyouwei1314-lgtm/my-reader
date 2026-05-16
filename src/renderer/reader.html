@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,18 +9,18 @@
   <div id="app">
     <header id="top-bar" class="reader-toolbar">
       <div class="toolbar-left">
-  <button id="back-btn" class="toolbar-btn" aria-label="返回書庫" title="返回書庫">
+  <button id="back-btn" class="toolbar-btn" aria-label="Back to library" title="Back to library">
   <span class="toolbar-btn-icon">
     <svg class="toolbar-svg icon-back" viewBox="0 -960 960 960" aria-hidden="true">
       <path d="M560-240 320-480l240-240 56 56-184 184 184 184-56 56Z" fill="currentColor"></path>
     </svg>
   </span>
-  <span class="toolbar-btn-label">返回書庫</span>
+  <span class="toolbar-btn-label">Back</span>
 </button>
 </div>
 
       <div class="toolbar-center">
-  <button id="favorite-btn" class="toolbar-icon-btn favorite-toolbar-btn" aria-label="加入我的最愛" title="加入我的最愛">
+  <button id="favorite-btn" class="toolbar-icon-btn favorite-toolbar-btn" aria-label="Add to favorites" title="Add to favorites">
     <svg class="toolbar-svg icon-favorite" viewBox="0 -960 960 960" aria-hidden="true">
       <path
         id="favorite-icon-path"
@@ -30,7 +30,7 @@
     </svg>
   </button>
 
-  <button id="fit-toggle-btn" class="toolbar-icon-btn" aria-label="切換適應模式" title="切換適應模式">
+  <button id="fit-toggle-btn" class="toolbar-icon-btn" aria-label="Fit height" title="Fit height">
     <svg id="fit-icon-svg" class="toolbar-svg icon-fit" viewBox="0 -960 960 960" aria-hidden="true">
       <path
         id="fit-icon-path"
@@ -40,7 +40,7 @@
     </svg>
   </button>
 
-  <button id="mode-toggle-btn" class="toolbar-icon-btn" aria-label="切換閱讀模式" title="切換閱讀模式">
+  <button id="mode-toggle-btn" class="toolbar-icon-btn" aria-label="Switch reading mode" title="Switch reading mode">
     <svg class="toolbar-svg icon-mode" viewBox="0 -960 960 960" aria-hidden="true">
       <path
         id="mode-icon-path"
@@ -50,7 +50,7 @@
     </svg>
   </button>
 
-  <button id="autoplay-btn" class="toolbar-icon-btn" aria-label="循環播放" title="循環播放">
+  <button id="autoplay-btn" class="toolbar-icon-btn" aria-label="Slideshow" title="Slideshow">
     <svg class="toolbar-svg icon-autoplay" viewBox="0 -960 960 960" aria-hidden="true">
       <path
         id="autoplay-icon-path"
@@ -60,7 +60,7 @@
     </svg>
   </button>
 
-  <button id="fullscreen-btn" class="toolbar-icon-btn" aria-label="進入全螢幕" title="進入全螢幕">
+  <button id="fullscreen-btn" class="toolbar-icon-btn" aria-label="Enter fullscreen" title="Enter fullscreen">
     <svg class="toolbar-svg icon-fullscreen" viewBox="0 -960 960 960" aria-hidden="true">
       <path
         id="fullscreen-icon-path"
@@ -84,7 +84,7 @@
 
     <main id="reader-shell">
       <div id="reader-container">
-        <div id="loading-text" class="pdf-loading">載入中...</div>
+        <div id="loading-text" class="pdf-loading">Loading...</div>
         <div id="pdf-pages"></div>  
       </div>
     </main>

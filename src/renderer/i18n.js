@@ -1,0 +1,337 @@
+const I18N = {
+    'zh-TW': {
+        appName: 'AirWei Reader',
+
+        common: {
+            back: '返回',
+            copy: 'Copy',
+            copied: 'Copied',
+            loading: '載入中...',
+            fullscreenEnter: '進入全螢幕',
+            fullscreenExit: '離開全螢幕',
+            settings: '設定',
+        },
+
+        library: {
+            noLibrary: '尚未選擇書庫',
+            noBooks: '此資料夾內沒有 cbz 或 pdf',
+            search: '搜尋',
+            clearSearch: '清除搜尋',
+            noSearchResult: '沒有符合搜尋條件的書籍',
+            selectBookFirst: '請先選擇一本書',
+            recentReading: '最近閱讀',
+            read: 'Read',
+            type: '類型',
+            progress: '進度',
+            unknown: '未知',
+            notStarted: '未開始',
+            completed: '（已看完）',
+            loadFailed: '讀取失敗',
+            coverPreview: '封面預覽',
+            addFavorite: '加入我的最愛',
+            removeFavorite: '移除我的最愛',
+            pages: 'pages',
+            unsupportedFormat: '不支援的格式',
+            coverSaveFailed: '封面存檔失敗',
+            pdfCoverSaveFailed: 'PDF 封面存檔失敗（不影響顯示）：',
+            cbzCoverSaveFailed: 'CBZ 封面存檔失敗（不影響顯示）：',
+            coverGenerateFailed: '封面生成失敗',
+            cbzNoImages: 'CBZ 內沒有可用圖片',
+            cbzCoverLoadFailed: 'CBZ 封面圖片載入失敗',
+            readProgressFailed: '讀取閱讀進度失敗：',
+            updateFavoriteFailed: '更新我的最愛狀態失敗：',
+            readRecentFailed: '讀取最近閱讀失敗：',
+            syncFavoriteFailed: 'focus 時同步最愛狀態失敗：',
+        },
+
+        reader: {
+            unnamedBook: '未命名書籍',
+            filePathMissing: '找不到檔案路徑',
+            unsupportedFile: '不支援的檔案格式',
+            loadingPdf: '正在載入 PDF...',
+            loadingCbz: '正在載入 CBZ...',
+            loadFailed: '載入失敗',
+            addFavorite: '加入我的最愛',
+            removeFavorite: '移除我的最愛',
+            addBookmark: '加入書籤',
+            removeBookmark: '移除書籤',
+            nextBookmark: '跳轉下一書籤',
+            prevBookmark: '跳轉上一書籤',
+            pagedMode: '切換頁模式',
+            scrollMode: '捲動頁模式',
+            fitHeight: '佔滿視窗高度',
+            fitWidth: '佔滿視窗寬度',
+            pauseAutoplay: '暫停播放',
+            autoplay: '循環播放',
+            autoplayWithSeconds: '循環播放（{seconds} 秒）',
+            pdfPathMissing: '找不到 PDF 路徑',
+            cbzPathMissing: '找不到 CBZ 路徑',
+            cbzNoImages: 'CBZ 內沒有可用圖片',
+            cbzPageMissing: '找不到 CBZ 第 {page} 頁資料',
+            pageRenderFailed: '第 {page} 頁渲染失敗：',
+            pageLoadFailed: '第 {page} 頁載入失敗',
+            saveProgressFailed: '儲存閱讀進度失敗：',
+            readProgressFailed: '讀取閱讀進度失敗：',
+            readBookTagsFailed: '讀取書籍標籤失敗：',
+            updateFavoriteFailed: '更新我的最愛失敗：',
+            readBookmarksFailed: '讀取書籤失敗：',
+            readSettingsFailed: '讀取閱讀器設定失敗：',
+            fullscreenFailed: '切換全螢幕失敗：',
+            initFailed: 'initReader 失敗：',
+            returnBeforeSaveFailed: '返回書庫前儲存狀態失敗：',
+            resizeFailed: 'resize 處理失敗：',
+            beforeUnloadSaveFailed: 'beforeunload 儲存閱讀進度失敗：',
+            decodeUriFailed: 'decodeURIComponent 失敗：',
+            backToLibrary: '返回書庫',
+        },
+
+        settings: {
+            titleLibrary: '書庫',
+            titleAppearance: '個人化',
+            titleHistory: '紀錄',
+            titleReading: '閱讀功能細項',
+            titleFullscreen: '全螢幕',
+            language: '語言',
+            traditionalChinese: '繁體中文',
+            english: 'English',
+            japanese: '日本語',
+        },
+    },
+
+    en: {
+        appName: 'AirWei Reader',
+
+        common: {
+            back: 'Back',
+            copy: 'Copy',
+            copied: 'Copied',
+            loading: 'Loading...',
+            fullscreenEnter: 'Enter fullscreen',
+            fullscreenExit: 'Exit fullscreen',
+            settings: 'Settings',
+        },
+
+        library: {
+            search: 'Search',
+            clearSearch: 'Clear search',
+            recentReading: 'Recent reading',
+            noLibrary: 'No library selected',
+            selectBookFirst: 'Select a book first',
+            coverPreview: 'Cover preview',
+            read: 'Read',
+            type: 'Type',
+            progress: 'Progress',
+            unknown: 'Unknown',
+            notStarted: 'Not started',
+            completed: '(Completed)',
+            loadFailed: 'Load failed',
+            noSearchResult: 'No books match your search',
+            noBooks: 'No CBZ or PDF files in this folder',
+            addFavorite: 'Add to favorites',
+            removeFavorite: 'Remove from favorites',
+            pages: 'pages',
+            unsupportedFormat: 'Unsupported format',
+            coverSaveFailed: 'Cover save failed',
+            pdfCoverSaveFailed: 'PDF cover save failed (display is unaffected):',
+            cbzCoverSaveFailed: 'CBZ cover save failed (display is unaffected):',
+            coverGenerateFailed: 'Cover generation failed',
+            cbzNoImages: 'No usable images in this CBZ file',
+            cbzCoverLoadFailed: 'Failed to load CBZ cover image',
+            readProgressFailed: 'Failed to read progress:',
+            updateFavoriteFailed: 'Failed to update favorite status:',
+            readRecentFailed: 'Failed to read recent reading:',
+            syncFavoriteFailed: 'Failed to sync favorite status on focus:',
+        },
+
+        reader: {
+            unnamedBook: 'Untitled book',
+            filePathMissing: 'File path not found',
+            unsupportedFile: 'Unsupported file format',
+            loadingPdf: 'Loading PDF...',
+            loadingCbz: 'Loading CBZ...',
+            loadFailed: 'Load failed',
+            addFavorite: 'Add to favorites',
+            removeFavorite: 'Remove from favorites',
+            addBookmark: 'Add bookmark',
+            removeBookmark: 'Remove bookmark',
+            nextBookmark: 'Next bookmark',
+            prevBookmark: 'Previous bookmark',
+            pagedMode: 'Switch to paged mode',
+            scrollMode: 'Switch to scroll mode',
+            fitHeight: 'Fit height',
+            fitWidth: 'Fit width',
+            pauseAutoplay: 'Pause',
+            autoplay: 'Slideshow',
+            autoplayWithSeconds: 'Slideshow ({seconds}s)',
+            pdfPathMissing: 'PDF path not found',
+            cbzPathMissing: 'CBZ path not found',
+            cbzNoImages: 'No usable images in this CBZ file',
+            cbzPageMissing: 'CBZ page {page} data not found',
+            pageRenderFailed: 'Failed to render page {page}:',
+            pageLoadFailed: 'Failed to load page {page}',
+            saveProgressFailed: 'Failed to save reading progress:',
+            readProgressFailed: 'Failed to read reading progress:',
+            readBookTagsFailed: 'Failed to read book tags:',
+            updateFavoriteFailed: 'Failed to update favorite:',
+            readBookmarksFailed: 'Failed to read bookmarks:',
+            readSettingsFailed: 'Failed to read reader settings:',
+            fullscreenFailed: 'Failed to toggle fullscreen:',
+            initFailed: 'initReader failed:',
+            returnBeforeSaveFailed: 'Failed to save state before returning to library:',
+            resizeFailed: 'Resize handling failed:',
+            beforeUnloadSaveFailed: 'Failed to save reading progress before unload:',
+            decodeUriFailed: 'decodeURIComponent failed:',
+            backToLibrary: 'Back to library',
+        },
+
+        settings: {
+            titleLibrary: 'Library',
+            titleAppearance: 'Personalization',
+            titleHistory: 'History',
+            titleReading: 'Reading controls',
+            titleFullscreen: 'Fullscreen',
+            language: 'Language',
+            traditionalChinese: '繁體中文',
+            english: 'English',
+            japanese: '日本語',
+        },
+    },
+
+    ja: {
+        appName: 'AirWei Reader',
+
+        common: {
+            back: '戻る',
+            copy: 'コピー',
+            copied: 'コピーしました',
+            loading: '読み込み中...',
+            fullscreenEnter: '全画面表示',
+            fullscreenExit: '全画面を終了',
+            settings: '設定',
+        },
+
+        library: {
+            noLibrary: 'ライブラリが選択されていません',
+            noBooks: 'このフォルダーには CBZ または PDF がありません',
+            search: '検索',
+            clearSearch: '検索をクリア',
+            noSearchResult: '一致する本がありません',
+            selectBookFirst: '本を選択してください',
+            recentReading: '最近読んだ本',
+            read: '読む',
+            type: '形式',
+            progress: '進捗',
+            unknown: '不明',
+            notStarted: '未読',
+            completed: '（読了）',
+            loadFailed: '読み込み失敗',
+            coverPreview: '表紙プレビュー',
+            addFavorite: 'お気に入りに追加',
+            removeFavorite: 'お気に入りから削除',
+            pages: 'ページ',
+            unsupportedFormat: '対応していない形式です',
+            coverSaveFailed: '表紙の保存に失敗しました',
+            pdfCoverSaveFailed: 'PDF 表紙の保存に失敗しました（表示には影響しません）：',
+            cbzCoverSaveFailed: 'CBZ 表紙の保存に失敗しました（表示には影響しません）：',
+            coverGenerateFailed: '表紙の生成に失敗しました',
+            cbzNoImages: 'CBZ 内に使用可能な画像がありません',
+            cbzCoverLoadFailed: 'CBZ 表紙画像の読み込みに失敗しました',
+            readProgressFailed: '読書進捗の読み込みに失敗しました：',
+            updateFavoriteFailed: 'お気に入り状態の更新に失敗しました：',
+            readRecentFailed: '最近読んだ本の読み込みに失敗しました：',
+            syncFavoriteFailed: 'フォーカス時のお気に入り同期に失敗しました：',
+        },
+
+        reader: {
+            unnamedBook: '無題の本',
+            filePathMissing: 'ファイルパスが見つかりません',
+            unsupportedFile: '対応していないファイル形式です',
+            loadingPdf: 'PDF を読み込み中...',
+            loadingCbz: 'CBZ を読み込み中...',
+            loadFailed: '読み込み失敗',
+            addFavorite: 'お気に入りに追加',
+            removeFavorite: 'お気に入りから削除',
+            addBookmark: 'しおりを追加',
+            removeBookmark: 'しおりを削除',
+            nextBookmark: '次のしおりへ',
+            prevBookmark: '前のしおりへ',
+            pagedMode: 'ページモードに切り替え',
+            scrollMode: 'スクロールモード',
+            fitHeight: '高さに合わせる',
+            fitWidth: '幅に合わせる',
+            pauseAutoplay: '一時停止',
+            autoplay: 'スライドショー',
+            autoplayWithSeconds: 'スライドショー（{seconds} 秒）',
+            pdfPathMissing: 'PDF パスが見つかりません',
+            cbzPathMissing: 'CBZ パスが見つかりません',
+            cbzNoImages: 'CBZ 内に使用可能な画像がありません',
+            cbzPageMissing: 'CBZ の {page} ページ目のデータが見つかりません',
+            pageRenderFailed: '{page} ページ目の描画に失敗しました：',
+            pageLoadFailed: '{page} ページ目の読み込みに失敗しました',
+            saveProgressFailed: '読書進捗の保存に失敗しました：',
+            readProgressFailed: '読書進捗の読み込みに失敗しました：',
+            readBookTagsFailed: '書籍タグの読み込みに失敗しました：',
+            updateFavoriteFailed: 'お気に入りの更新に失敗しました：',
+            readBookmarksFailed: 'しおりの読み込みに失敗しました：',
+            readSettingsFailed: 'リーダー設定の読み込みに失敗しました：',
+            fullscreenFailed: '全画面の切り替えに失敗しました：',
+            initFailed: 'initReader に失敗しました：',
+            returnBeforeSaveFailed: 'ライブラリへ戻る前の状態保存に失敗しました：',
+            resizeFailed: 'リサイズ処理に失敗しました：',
+            beforeUnloadSaveFailed: '終了前の読書進捗保存に失敗しました：',
+            decodeUriFailed: 'decodeURIComponent に失敗しました：',
+            backToLibrary: 'ライブラリへ戻る',
+        },
+
+        settings: {
+            titleLibrary: 'ライブラリ',
+            titleAppearance: 'カスタマイズ',
+            titleHistory: '履歴',
+            titleReading: '読書機能',
+            titleFullscreen: '全画面',
+            language: '言語',
+            traditionalChinese: '繁體中文',
+            english: 'English',
+            japanese: '日本語',
+        },
+    },
+};
+
+export function normalizeLanguage(value) {
+    return ['zh-TW', 'en', 'ja'].includes(value) ? value : 'en';
+}
+
+export function createI18n(language) {
+    const currentLanguage = normalizeLanguage(language);
+    const dict = I18N[currentLanguage] || I18N['en'];
+    const fallback = I18N['en'];
+
+    function t(path, params = {}) {
+        const keys = path.split('.');
+
+        let value = dict;
+        let fallbackValue = fallback;
+
+        keys.forEach((key) => {
+            value = value?.[key];
+            fallbackValue = fallbackValue?.[key];
+        });
+
+        let text = typeof value === 'string'
+            ? value
+            : typeof fallbackValue === 'string'
+                ? fallbackValue
+                : path;
+
+        Object.entries(params).forEach(([key, val]) => {
+            text = text.replaceAll(`{${key}}`, String(val));
+        });
+
+        return text;
+    }
+
+    return {
+        language: currentLanguage,
+        t,
+    };
+}

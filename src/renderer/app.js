@@ -2,6 +2,7 @@ import './app.css';
 import * as pdfjsLib from 'pdfjs-dist';
 import { unzipSync } from 'fflate';
 import themeModule from './theme';
+import { createI18n } from './i18n';
 
 const {
   DEFAULT_THEME,
@@ -37,6 +38,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 
 const initialTheme = getInitialThemeFromQuery();
 applyAppTheme(document.documentElement, initialTheme);
+let i18n = createI18n('en');
 
 // ===== DOM 元素 =====
 const settingsBtn = document.getElementById('settings-btn');
@@ -72,6 +74,7 @@ let appSettings = {
   backgroundImagePath: '',
   backgroundOpacity: 16,
   backgroundBlur: 2,
+  language: 'en',
 };
 
 // ===== 封面尺寸設定 =====
@@ -150,6 +153,11 @@ function clampNumber(value, min, max, fallback) {
   }
 
   return Math.min(max, Math.max(min, numberValue));
+}
+
+function formatLabel(label, value) {
+  const separator = appSettings.language === 'en' ? ': ' : '：';
+  return `${label}${separator}${value}`;
 }
 
 function getCurrentBookCardWidth() {
@@ -398,12 +406,27 @@ function getSearchMatchedBooks() {
   });
 }
 
+function updateStaticUiText() {
+  if (bookSearchInput) {
+    bookSearchInput.placeholder = i18n.t('library.search');
+  }
+
+  if (settingsBtn) {
+    settingsBtn.title = i18n.t('common.settings');
+    settingsBtn.setAttribute('aria-label', i18n.t('common.settings'));
+  }
+}
+
 function updateBookSearchIcon() {
+  if (bookSearchInput) {
+    bookSearchInput.placeholder = i18n.t('library.search');
+  }
+
   if (!bookSearchClearBtn || !bookSearchIconPath) return;
 
   if (hasBookSearchKeyword()) {
-    bookSearchClearBtn.title = '清除搜尋';
-    bookSearchClearBtn.setAttribute('aria-label', '清除搜尋');
+    bookSearchClearBtn.title = i18n.t('library.clearSearch');
+    bookSearchClearBtn.setAttribute('aria-label', i18n.t('library.clearSearch'));
 
     bookSearchIconPath.setAttribute(
       'd',
@@ -413,8 +436,8 @@ function updateBookSearchIcon() {
     return;
   }
 
-  bookSearchClearBtn.title = '搜尋';
-  bookSearchClearBtn.setAttribute('aria-label', '搜尋');
+  bookSearchClearBtn.title = i18n.t('library.search');
+  bookSearchClearBtn.setAttribute('aria-label', i18n.t('library.search'));
 
   bookSearchIconPath.setAttribute(
     'd',
@@ -605,7 +628,7 @@ async function getRecentReadingBooks() {
       .filter(Boolean)
       .slice(0, 8);
   } catch (error) {
-    console.error('讀取最近閱讀失敗:', error);
+    console.error(i18n.t('library.readRecentFailed'), error);
     return [];
   }
 }
@@ -629,7 +652,7 @@ function getRecentReadingMarkup(recentBooks) {
         <svg class="recent-reading-icon" viewBox="0 -960 960 960" aria-hidden="true">
           <path d="M480-120q-138 0-240.5-91.5T122-440h82q14 104 92.5 172T480-200q117 0 198.5-81.5T760-480q0-117-81.5-198.5T480-760q-69 0-129 32t-101 88h110v80H120v-240h80v94q51-64 124.5-99T480-840q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-480q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-120Zm112-192L440-464v-216h80v184l128 128-56 56Z" fill="currentColor"></path>
         </svg>
-        <span>最近閱讀</span>
+        <span>${i18n.t('library.recentReading')}</span>
       </div>
 
       <div class="recent-reading-row">
@@ -827,7 +850,7 @@ async function generateCbzCoverDataUrl(filePath, width = GRID_COVER_WIDTH) {
   const imageNames = getSortedCbzImageNames(zipEntries);
 
   if (imageNames.length === 0) {
-    throw new Error('CBZ 內沒有可用圖片');
+    throw new Error(i18n.t('library.cbzNoImages'));
   }
 
   const firstImageName = imageNames[0];
@@ -847,7 +870,7 @@ async function generateCbzCoverDataUrl(filePath, width = GRID_COVER_WIDTH) {
     const img = new Image();
 
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('CBZ 封面圖片載入失敗'));
+    img.onerror = () => reject(new Error(i18n.t('library.cbzCoverLoadFailed')));
 
     img.src = sourceDataUrl;
   });
@@ -925,7 +948,7 @@ async function loadCoverNow(book, imgElement, width = 400) {
 
   if (book.type !== 'pdf' && book.type !== 'cbz') {
     imgElement.removeAttribute('src');
-    imgElement.alt = '不支援的格式';
+    imgElement.alt = i18n.t('library.unsupportedFormat');
     return;
   }
 
@@ -961,7 +984,7 @@ async function loadCoverNow(book, imgElement, width = 400) {
             if (b) {
               resolve(b);
             } else {
-              reject(new Error('toBlob 失敗'));
+              reject(new Error(i18n.t('library.coverSaveFailed')));
             }
           }, 'image/jpeg', 0.8);
         });
@@ -969,7 +992,7 @@ async function loadCoverNow(book, imgElement, width = 400) {
         const buffer = new Uint8Array(await blob.arrayBuffer());
         await window.readerAPI.saveCover(book.filePath, buffer, width);
       } catch (saveErr) {
-        console.warn('PDF 封面存檔失敗（不影響顯示）:', saveErr);
+        console.warn(i18n.t('library.pdfCoverSaveFailed'), saveErr);
       }
 
       return;
@@ -988,14 +1011,14 @@ async function loadCoverNow(book, imgElement, width = 400) {
 
         await window.readerAPI.saveCover(book.filePath, buffer, width);
       } catch (saveErr) {
-        console.warn('CBZ 封面存檔失敗（不影響顯示）:', saveErr);
+        console.warn(i18n.t('library.cbzCoverSaveFailed'), saveErr);
       }
     }
   } catch (err) {
-    console.error('封面生成失敗:', book.filePath, err);
+    console.error(i18n.t('library.coverGenerateFailed'), book.filePath, err);
     imgElement.dataset.coverFailed = 'true';
     imgElement.removeAttribute('src');
-    imgElement.alt = '封面生成失敗';
+    imgElement.alt = i18n.t('library.coverGenerateFailed');
   }
 }
 
@@ -1038,7 +1061,9 @@ async function openReader(bookId) {
 
 function getFavoriteButtonMarkup(book) {
   const isFavorite = isFavoriteBook(book);
-  const label = isFavorite ? '移除我的最愛' : '加入我的最愛';
+  const label = isFavorite
+    ? i18n.t('library.removeFavorite')
+    : i18n.t('library.addFavorite');
   const activeClass = isFavorite ? ' active' : '';
 
   const favoritePath = isFavorite
@@ -1061,21 +1086,21 @@ function renderDetailPanel() {
   const selectedBook = getBookById(selectedBookId);
 
   if (!selectedBook) {
-    detailPanel.innerHTML = `<div class="detail-empty">請先選擇一本書</div>`;
+    detailPanel.innerHTML = `<div class="detail-empty">${i18n.t('library.selectBookFirst')}</div>`;
     return;
   }
 
   detailPanel.innerHTML = `   
     <div class="detail-cover">
-        <img class="detail-cover-img" id="detail-cover-preview" alt="封面預覽">
+        <img class="detail-cover-img" id="detail-cover-preview" alt="${i18n.t('library.coverPreview')}">
       </div>
     <div class="detail-group">
       <div class="detail-title">${selectedBook.title}</div>
-      <div class="detail-text">類型：${selectedBook.type.toUpperCase()}</div>
-      <div class="detail-text" id="progress-text">進度：讀取中...</div>  
+      <div class="detail-text">${formatLabel(i18n.t('library.type'), selectedBook.type.toUpperCase())}</div>
+      <div class="detail-text" id="progress-text">${formatLabel(i18n.t('library.progress'), i18n.t('common.loading'))}</div> 
     </div>
     <div class="detail-actions">
-      <button class="read-btn" id="read-btn">Read</button>
+      <button class="read-btn" id="read-btn">${i18n.t('library.read')}</button>
       ${getFavoriteButtonMarkup(selectedBook)}
     </div>
   `;
@@ -1144,7 +1169,10 @@ async function updateReadingProgressText(book) {
   if (!progressText) return;
 
   if (!window.readerAPI?.getReadingProgress) {
-    progressText.textContent = '進度：未知';
+    progressText.textContent = formatLabel(
+      i18n.t('library.progress'),
+      i18n.t('library.unknown')
+    );
     return;
   }
 
@@ -1152,7 +1180,10 @@ async function updateReadingProgressText(book) {
     const record = await window.readerAPI.getReadingProgress(book.filePath);
 
     if (!record) {
-      progressText.textContent = '進度：未開始';
+      progressText.textContent = formatLabel(
+        i18n.t('library.progress'),
+        i18n.t('library.notStarted')
+      );
       return;
     }
 
@@ -1162,13 +1193,20 @@ async function updateReadingProgressText(book) {
     const completedText =
       record.completed === true ||
         (Number(totalPages) > 0 && Number(currentPage) >= Number(totalPages))
-        ? '（已看完）'
+        ? ` ${i18n.t('library.completed')}`
         : '';
 
-    progressText.textContent = `進度：# ${currentPage} / ${totalPages} pages ${completedText}`;
+    progressText.textContent = formatLabel(
+      i18n.t('library.progress'),
+      `# ${currentPage} / ${totalPages} ${i18n.t('library.pages')}${completedText}`
+    );
   } catch (error) {
-    console.error('讀取閱讀進度失敗:', error);
-    progressText.textContent = '進度：讀取失敗';
+    console.error(i18n.t('library.readProgressFailed'), error);
+
+    progressText.textContent = formatLabel(
+      i18n.t('library.progress'),
+      i18n.t('library.loadFailed')
+    );
   }
 }
 
@@ -1231,7 +1269,7 @@ async function setBookFavorite(bookId, isFavorite) {
     updateRecentReadingFavoriteState(book.id);
     await rerenderBookGridIfSortAffected();
   } catch (error) {
-    console.error('更新我的最愛狀態失敗:', error);
+    console.error(i18n.t('library.updateFavoriteFailed'), error);
   }
 }
 
@@ -1245,8 +1283,8 @@ async function renderBookGrid() {
 
   if (sortedBooks.length === 0) {
     bookGrid.innerHTML = hasBookSearchKeyword()
-      ? `<div class="search-empty-message">沒有符合搜尋條件的書籍</div>`
-      : `<div>此資料夾內沒有 cbz 或 pdf</div>`;
+      ? `<div class="search-empty-message">${i18n.t('library.noSearchResult')}</div>`
+      : `<div>${i18n.t('library.noBooks')}</div>`;
 
     renderDetailPanel();
     await renderRecentReadingSection();
@@ -1445,7 +1483,7 @@ function getLibraryDisplayLabel() {
     return customName;
   }
 
-  return currentLibraryPath || '尚未選擇書庫';
+  return currentLibraryPath || i18n.t('library.noLibrary');
 }
 
 function renderLibraryTitle() {
@@ -1523,7 +1561,9 @@ async function loadAppSettings() {
       backgroundImagePath: settings?.backgroundImagePath || '',
       backgroundOpacity: clampNumber(settings?.backgroundOpacity, 0, 100, 16),
       backgroundBlur: clampNumber(settings?.backgroundBlur, 0, 40, 2),
+      language: settings?.language || 'en',
     };
+    i18n = createI18n(appSettings.language);
   } catch (error) {
     console.error('讀取設定失敗:', error);
   }
@@ -1550,7 +1590,9 @@ async function restoreLastLibrary() {
 function updateFullscreenButton() {
   if (!fullscreenBtn) return;
 
-  const label = isFullscreen ? '離開全螢幕' : '進入全螢幕';
+  const label = isFullscreen
+    ? i18n.t('common.fullscreenExit')
+    : i18n.t('common.fullscreenEnter');
   fullscreenBtn.title = label;
   fullscreenBtn.setAttribute('aria-label', label);
 
@@ -1594,9 +1636,14 @@ window.readerAPI?.onAppSettingsUpdated?.(async (nextSettings) => {
     backgroundImagePath: nextSettings?.backgroundImagePath || '',
     backgroundOpacity: clampNumber(nextSettings?.backgroundOpacity, 0, 100, 16),
     backgroundBlur: clampNumber(nextSettings?.backgroundBlur, 0, 40, 2),
+    language: nextSettings?.language || appSettings.language || 'en',
   };
 
+  i18n = createI18n(appSettings.language);
   applyAppTheme(document.documentElement, appSettings);
+  updateStaticUiText();
+  updateFullscreenButton();
+  updateBookSearchIcon();
   renderLibraryTitle();
   await renderBookGrid();
   await applyPageBackground();
@@ -1654,7 +1701,7 @@ window.addEventListener('focus', async () => {
     renderDetailPanel();
     await renderRecentReadingSection();
   } catch (error) {
-    console.error('focus 時同步最愛狀態失敗:', error);
+    console.error(i18n.t('library.syncFavoriteFailed'), error);
   }
 });
 
@@ -1738,9 +1785,10 @@ window.addEventListener('resize', () => {
 
 // ===== 初始化 =====
 async function initApp() {
+  await loadAppSettings();
+  updateStaticUiText();
   updateFullscreenButton();
   updateBookSearchIcon();
-  await loadAppSettings();
   await restoreLastLibrary();
   await applyPageBackground();
   setupRecentBookCardWidthSync();

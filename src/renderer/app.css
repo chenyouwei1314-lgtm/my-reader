@@ -93,7 +93,7 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: 0.2s ease;
+  transition: opacity 0.2s ease;
 }
 
 button:hover {

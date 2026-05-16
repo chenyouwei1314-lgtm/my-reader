@@ -2,12 +2,15 @@ import './reader.css';
 import * as pdfjsLib from 'pdfjs-dist';
 import { unzipSync } from 'fflate';
 import themeModule from './theme';
+import { createI18n } from './i18n';
 
 const {
   DEFAULT_THEME,
   normalizeThemeColor,
   applyReaderTheme,
 } = themeModule;
+
+let i18n = createI18n('en');
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -36,10 +39,11 @@ const readerContainer = document.getElementById('reader-container');
 const copyPopover = document.createElement('button');
 copyPopover.className = 'pdf-copy-popover';
 copyPopover.type = 'button';
-copyPopover.textContent = 'Copy';
+copyPopover.textContent = i18n.t('common.copy');
 document.body.appendChild(copyPopover);
 const HOLD_SCROLL_STEP = 28;
 const KEY_SCROLL_STEP = 28;
+const backBtnLabel = backBtn?.querySelector('.toolbar-btn-label');
 
 // =========================================================
 // 閱讀器狀態
@@ -139,7 +143,7 @@ function safeDecodeURIComponent(value, fallback = '') {
   try {
     return decodeURIComponent(value);
   } catch (error) {
-    console.warn('decodeURIComponent 失敗:', value, error);
+    console.warn(i18n.t('reader.decodeUriFailed'), value, error);
     return value;
   }
 }
@@ -149,7 +153,7 @@ function getQueryParams() {
 
   return {
     filePath: safeDecodeURIComponent(params.get('filePath'), ''),
-    title: safeDecodeURIComponent(params.get('title'), '未命名書籍'),
+    title: safeDecodeURIComponent(params.get('title'), i18n.t('reader.unnamedBook')),
     theme:
       params.get('theme') === 'light'
         ? 'light'
@@ -221,7 +225,7 @@ async function saveReadingProgress() {
       totalPages
     );
   } catch (error) {
-    console.error('儲存閱讀進度失敗:', error);
+    console.error(i18n.t('reader.saveProgressFailed'), error);
   }
 }
 
@@ -236,7 +240,7 @@ async function restoreReadingProgress() {
 
     currentPage = clampPage(Number(record.page) || 1);
   } catch (error) {
-    console.error('讀取閱讀進度失敗:', error);
+    console.error(i18n.t('reader.readProgressFailed'), error);
   }
 }
 
@@ -503,7 +507,9 @@ function updateFavoriteButton() {
   const favorite = isFavoriteBook();
   favoriteBtn.classList.toggle('active', favorite);
 
-  const label = favorite ? '移除我的最愛' : '加入我的最愛';
+  const label = favorite
+    ? i18n.t('reader.removeFavorite')
+    : i18n.t('reader.addFavorite');
   favoriteBtn.title = label;
   favoriteBtn.setAttribute('aria-label', label);
 
@@ -532,7 +538,7 @@ async function loadCurrentBookTags() {
   try {
     currentBookTags = await window.readerAPI.getBookTags(currentFilePath) || {};
   } catch (error) {
-    console.error('讀取書籍標籤失敗:', error);
+    console.error(i18n.t('reader.readBookTagsFailed'), error);
     currentBookTags = {};
   }
 
@@ -550,7 +556,7 @@ async function toggleFavorite() {
 
     updateFavoriteButton();
   } catch (error) {
-    console.error('更新我的最愛失敗:', error);
+    console.error(i18n.t('reader.updateFavoriteFailed'), error);
   }
 }
 
@@ -579,7 +585,7 @@ function loadBookmarkPages() {
         : []
     );
   } catch (error) {
-    console.error('讀取書籤失敗:', error);
+    console.error(i18n.t('reader.readBookmarksFailed'), error);
     bookmarkPages = new Set();
   }
 }
@@ -604,11 +610,12 @@ function updateBookmarkButton() {
   const bookmarked = isCurrentPageBookmarked();
 
   bookmarkBtn.classList.toggle('active', bookmarked);
-  bookmarkBtn.title = bookmarked ? '移除書籤' : '加入書籤';
-  bookmarkBtn.setAttribute(
-    'aria-label',
-    bookmarked ? '移除書籤' : '加入書籤'
-  );
+  const label = bookmarked
+    ? i18n.t('reader.removeBookmark')
+    : i18n.t('reader.addBookmark');
+
+  bookmarkBtn.title = label;
+  bookmarkBtn.setAttribute('aria-label', label);
 
   if (bookmarked) {
     bookmarkIconPath.setAttribute(
@@ -720,12 +727,12 @@ function createBookmarkPageIndicatorButtons() {
   prevBookmarkBtn = document.createElement('button');
   prevBookmarkBtn.className = 'page-bookmark-nav-btn page-bookmark-nav-left';
   prevBookmarkBtn.type = 'button';
-  prevBookmarkBtn.title = '跳轉下一書籤';
+  prevBookmarkBtn.title = '';
 
   nextBookmarkBtn = document.createElement('button');
   nextBookmarkBtn.className = 'page-bookmark-nav-btn page-bookmark-nav-right';
   nextBookmarkBtn.type = 'button';
-  nextBookmarkBtn.title = '跳轉上一書籤';
+  nextBookmarkBtn.title = '';
 
   const bookmarkSvg = `
     <svg class="page-bookmark-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true">
@@ -757,17 +764,19 @@ function updateBookmarkNavTitles() {
 
   const leftMeansNext = bookmarkCommand !== 'leftPrevRightNext';
 
-  prevBookmarkBtn.title = leftMeansNext ? '跳轉下一書籤' : '跳轉上一書籤';
-  prevBookmarkBtn.setAttribute(
-    'aria-label',
-    leftMeansNext ? '跳轉下一書籤' : '跳轉上一書籤'
-  );
+  const prevLabel = leftMeansNext
+    ? i18n.t('reader.nextBookmark')
+    : i18n.t('reader.prevBookmark');
 
-  nextBookmarkBtn.title = leftMeansNext ? '跳轉上一書籤' : '跳轉下一書籤';
-  nextBookmarkBtn.setAttribute(
-    'aria-label',
-    leftMeansNext ? '跳轉上一書籤' : '跳轉下一書籤'
-  );
+  const nextLabel = leftMeansNext
+    ? i18n.t('reader.prevBookmark')
+    : i18n.t('reader.nextBookmark');
+
+  prevBookmarkBtn.title = prevLabel;
+  prevBookmarkBtn.setAttribute('aria-label', prevLabel);
+
+  nextBookmarkBtn.title = nextLabel;
+  nextBookmarkBtn.setAttribute('aria-label', nextLabel);
 }
 
 function setupBookmarkUi() {
@@ -786,15 +795,12 @@ function updateModeButtons() {
   const isPaged = readerMode === 'paged';
 
   modeToggleBtn.classList.toggle('active', !isPaged);
-  modeToggleBtn.title = isPaged
-    ? '切換頁模式'
-    : '捲動頁模式';
-  modeToggleBtn.setAttribute(
-    'aria-label',
-    isPaged
-      ? '切換頁模式'
-      : '捲動頁模式'
-  );
+  const label = isPaged
+    ? i18n.t('reader.pagedMode')
+    : i18n.t('reader.scrollMode');
+
+  modeToggleBtn.title = label;
+  modeToggleBtn.setAttribute('aria-label', label);
 
   if (!modeIconPath) return;
 
@@ -817,15 +823,12 @@ function updateFitButtons() {
   const isFitHeight = pageFitMode === 'height';
 
   fitToggleBtn.classList.toggle('active', !isFitHeight);
-  fitToggleBtn.title = isFitHeight
-    ? '佔滿視窗高度'
-    : '佔滿視窗寬度';
-  fitToggleBtn.setAttribute(
-    'aria-label',
-    isFitHeight
-      ? '佔滿視窗高度'
-      : '佔滿視窗寬度'
-  );
+  const label = isFitHeight
+    ? i18n.t('reader.fitHeight')
+    : i18n.t('reader.fitWidth');
+
+  fitToggleBtn.title = label;
+  fitToggleBtn.setAttribute('aria-label', label);
 
   if (fitIconSvg) {
     fitIconSvg.style.transform = isFitHeight ? 'rotate(90deg)' : 'rotate(0deg)';
@@ -843,7 +846,9 @@ function updateFitButtons() {
 function updateFullscreenButton() {
   if (!fullscreenBtn || !fullscreenIconPath) return;
 
-  const label = isFullscreen ? '離開全螢幕' : '進入全螢幕';
+  const label = isFullscreen
+    ? i18n.t('common.fullscreenExit')
+    : i18n.t('common.fullscreenEnter');
   fullscreenBtn.title = label;
   fullscreenBtn.setAttribute('aria-label', label);
 
@@ -875,6 +880,30 @@ function updateReaderContainerModeClass() {
   }
 }
 
+function updateReaderUiText() {
+  updateFavoriteButton();
+  updateBookmarkButton();
+  updateBookmarkNavTitles();
+  updateModeButtons();
+  updateFitButtons();
+  updateFullscreenButton();
+  updateAutoPlayButton();
+
+  if (!copyPopover.classList.contains('copied')) {
+    copyPopover.textContent = i18n.t('common.copy');
+  }
+
+  if (backBtn) {
+    const label = i18n.t('reader.backToLibrary');
+    backBtn.title = label;
+    backBtn.setAttribute('aria-label', label);
+  }
+
+  if (backBtnLabel) {
+    backBtnLabel.textContent = i18n.t('common.back');
+  }
+}
+
 // =========================================================
 // 自動播放
 // =========================================================
@@ -894,9 +923,14 @@ function updateAutoPlayButton() {
 
   autoplayBtn.disabled = !canPlay;
   autoplayBtn.classList.toggle('active', isAutoPlaying && canPlay);
-  autoplayBtn.title = isAutoPlaying && canPlay
-    ? `暫停播放`
-    : `循環播放（${autoPlayIntervalMs / 1000} 秒）`;
+  const label = isAutoPlaying && canPlay
+    ? i18n.t('reader.pauseAutoplay')
+    : i18n.t('reader.autoplayWithSeconds', {
+      seconds: autoPlayIntervalMs / 1000,
+    });
+
+  autoplayBtn.title = label;
+  autoplayBtn.setAttribute('aria-label', label);
 
   if (!autoplayIconPath) return;
 
@@ -970,6 +1004,8 @@ async function loadReaderSettings() {
       (Number(settings?.autoPlaySeconds) || 5) * 1000
     );
 
+    i18n = createI18n(settings?.language || 'en');
+
     contentReadingMode =
       settings?.contentReadingMode === 'comic'
         ? 'comic'
@@ -988,8 +1024,9 @@ async function loadReaderSettings() {
         : 'leftNextRightPrev';
 
     applyReaderTheme(document.documentElement, settings);
+    updateReaderUiText();
   } catch (error) {
-    console.error('讀取閱讀器設定失敗:', error);
+    console.error(i18n.t('reader.readSettingsFailed'), error);
     autoPlayIntervalMs = 5000;
     applyReaderTheme(document.documentElement, {
       appearanceTheme: DEFAULT_THEME.appearanceTheme,
@@ -1001,6 +1038,8 @@ async function loadReaderSettings() {
 async function applyNewSettings(settings) {
   const seconds = Math.max(1, Number(settings?.autoPlaySeconds) || 5);
   autoPlayIntervalMs = seconds * 1000;
+
+  i18n = createI18n(settings?.language || 'en');
 
   const nextContentReadingMode =
     settings?.contentReadingMode === 'comic'
@@ -1021,8 +1060,8 @@ async function applyNewSettings(settings) {
       ? 'leftPrevRightNext'
       : 'leftNextRightPrev';
 
-  updateBookmarkNavTitles();
   applyReaderTheme(document.documentElement, settings);
+  updateReaderUiText();
 
   if (modeChanged && totalPages > 0) {
     const anchorPage = getCurrentAnchorPage();
@@ -1108,7 +1147,7 @@ function createPagePlaceholder(pageNumber) {
 
   const placeholder = document.createElement('div');
   placeholder.className = 'pdf-page-placeholder';
-  placeholder.textContent = '載入中...';
+  placeholder.textContent = i18n.t('common.loading');
 
   wrapper.appendChild(placeholder);
   return wrapper;
@@ -1129,7 +1168,7 @@ function rebuildPagePlaceholders() {
 // =========================================================
 async function loadPdfDocument(filePath) {
   if (!filePath) {
-    throw new Error('找不到 PDF 路徑');
+    throw new Error(i18n.t('reader.pdfPathMissing'));
   }
 
   const pdfBuffer = await window.readerAPI.readPdfFile(filePath);
@@ -1733,7 +1772,7 @@ function showCopyPopoverNearSelection(pageLayer, selectedChars) {
   const x = pageRect.left + firstChar.left;
   const y = pageRect.top + firstChar.top;
 
-  copyPopover.textContent = 'Copy';
+  copyPopover.textContent = i18n.t('common.copy');
   copyPopover.classList.remove('copied');
   copyPopover.style.left = `${Math.max(12, x)}px`;
   copyPopover.style.top = `${Math.max(12, y - 42)}px`;
@@ -1743,7 +1782,7 @@ function showCopyPopoverNearSelection(pageLayer, selectedChars) {
 async function copyFromPopover() {
   await copyCustomPdfSelection();
 
-  copyPopover.textContent = 'Copied';
+  copyPopover.textContent = i18n.t('common.copied');
   copyPopover.classList.add('copied');
 
   setTimeout(() => {
@@ -1768,7 +1807,7 @@ function getSortedCbzImageNames(zipEntries) {
 
 async function loadCbzDocument(filePath) {
   if (!filePath) {
-    throw new Error('找不到 CBZ 路徑');
+    throw new Error(i18n.t('reader.cbzPathMissing'));
   }
 
   const cbzBuffer = await window.readerAPI.readCbzFile(filePath);
@@ -1778,7 +1817,7 @@ async function loadCbzDocument(filePath) {
   cbzImageNames = getSortedCbzImageNames(cbzZipEntries);
 
   if (cbzImageNames.length === 0) {
-    throw new Error('CBZ 內沒有可用圖片');
+    throw new Error(i18n.t('reader.cbzNoImages'));
   }
 
   totalPages = cbzImageNames.length;
@@ -1796,7 +1835,9 @@ function getCbzPageBlob(pageNumber) {
   const imageData = cbzZipEntries?.[imageName];
 
   if (!imageData) {
-    throw new Error(`找不到 CBZ 第 ${pageNumber} 頁資料`);
+    throw new Error(i18n.t('reader.cbzPageMissing', {
+      page: pageNumber,
+    }));
   }
 
   const lowerName = imageName.toLowerCase();
@@ -1916,11 +1957,15 @@ async function renderPage(pageNumber) {
 
     wrapper.appendChild(pageElement);
   } catch (error) {
-    console.error(`第 ${pageNumber} 頁渲染失敗:`, error);
+    console.error(i18n.t('reader.pageRenderFailed', {
+      page: pageNumber,
+    }), error);
 
     const placeholder = wrapper.querySelector('.pdf-page-placeholder');
     if (placeholder) {
-      placeholder.textContent = `第 ${pageNumber} 頁載入失敗`;
+      placeholder.textContent = i18n.t('reader.pageLoadFailed', {
+        page: pageNumber,
+      });
     }
   }
 }
@@ -2356,7 +2401,7 @@ async function toggleFullscreen() {
       suppressScrollSync = false;
     });
   } catch (error) {
-    console.error('切換全螢幕失敗:', error);
+    console.error(i18n.t('reader.fullscreenFailed'), error);
   } finally {
     setTimeout(() => {
       isFullscreenTransition = false;
@@ -2376,7 +2421,7 @@ async function initReader() {
   });
 
   if (!filePath) {
-    showLoading('找不到檔案路徑');
+    showLoading(i18n.t('reader.filePathMissing'));
     return;
   }
 
@@ -2421,14 +2466,14 @@ async function initReader() {
 
     if (lowerPath.endsWith('.pdf')) {
       bookType = 'pdf';
-      showLoading('正在載入 PDF...');
+      showLoading(i18n.t('reader.loadingPdf'));
       await loadPdfDocument(filePath);
     } else if (lowerPath.endsWith('.cbz')) {
       bookType = 'cbz';
-      showLoading('正在載入 CBZ...');
+      showLoading(i18n.t('reader.loadingCbz'));
       await loadCbzDocument(filePath);
     } else {
-      showLoading('不支援的檔案格式');
+      showLoading(i18n.t('reader.unsupportedFile'));
       return;
     }
 
@@ -2443,8 +2488,8 @@ async function initReader() {
     await renderDocumentStructure(currentPage);
     queueSaveReadingProgress(0);
   } catch (error) {
-    console.error('initReader 失敗:', error);
-    showLoading(`載入失敗：${error.message}`);
+    console.error(i18n.t('reader.initFailed'), error);
+    showLoading(`${i18n.t('reader.loadFailed')}: ${error.message}`);
   }
 }
 
@@ -2595,7 +2640,7 @@ backBtn?.addEventListener('click', async () => {
       await window.readerAPI.saveLastSelectedBook(currentFilePath);
     }
   } catch (error) {
-    console.error('返回書庫前儲存狀態失敗:', error);
+    console.error(i18n.t('reader.returnBeforeSaveFailed'), error);
   }
 
   if (window.readerAPI?.returnToLibrary) {
@@ -2997,7 +3042,7 @@ window.addEventListener('resize', () => {
       await renderDocumentStructure(anchorPage);
       return;
     } catch (error) {
-      console.error('resize 處理失敗:', error);
+      console.error(i18n.t('reader.resizeFailed'), error);
       suppressScrollSync = false;
     } finally {
       isHandlingResize = false;
@@ -3012,7 +3057,7 @@ window.addEventListener('beforeunload', () => {
   try {
     saveReadingProgress();
   } catch (error) {
-    console.error('beforeunload 儲存閱讀進度失敗:', error);
+    console.error(i18n.t('reader.beforeUnloadSaveFailed'), error);
   }
 });
 

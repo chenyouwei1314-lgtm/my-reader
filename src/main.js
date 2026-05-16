@@ -108,6 +108,12 @@ function normalizeBookmarkCommand(value) {
     : 'leftNextRightPrev';
 }
 
+function normalizeLanguage(value) {
+  return ['zh-TW', 'en', 'ja'].includes(value)
+    ? value
+    : 'en';
+}
+
 /**
  * 數值夾取工具
  */
@@ -291,6 +297,7 @@ function loadAppState() {
         pageClickCommand: [],
         scrollHoldCommand: [],
         bookmarkCommand: 'leftNextRightPrev',
+        language: 'en',
       },
       recentReading: [],
     }
@@ -353,6 +360,9 @@ function loadAppState() {
         bookmarkCommand: normalizeBookmarkCommand(
           parsed.settings?.bookmarkCommand
         ),
+        language: normalizeLanguage(
+          parsed.settings?.language
+        ),
       },
     };
   } catch (error) {
@@ -383,6 +393,7 @@ function loadAppState() {
         pageClickCommand: [],
         scrollHoldCommand: [],
         bookmarkCommand: 'leftNextRightPrev',
+        language: 'en',
       },
       recentReading: [],
     };
@@ -652,6 +663,7 @@ function getAppSettings() {
     bookmarkCommand: normalizeBookmarkCommand(
       state.settings?.bookmarkCommand
     ),
+    language: normalizeLanguage(state.settings?.language),
   };
 }
 
@@ -731,6 +743,9 @@ function saveAppSettings(settings = {}) {
     ),
     bookmarkCommand: normalizeBookmarkCommand(
       settings.bookmarkCommand ?? state.settings?.bookmarkCommand
+    ),
+    language: normalizeLanguage(
+      settings.language ?? state.settings?.language
     ),
   };
 
