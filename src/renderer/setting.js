@@ -1,5 +1,6 @@
 ﻿import './setting.css';
 import themeModule from './theme';
+import { normalizeLanguage } from './i18n';
 
 const {
   DEFAULT_THEME,
@@ -58,6 +59,7 @@ let settings = {
   autoPlaySeconds: 5,
   bookSortMode: 'none',
   readingHistoryVisibility: 'hidden',
+  language: 'en',
   appearanceTheme: DEFAULT_THEME.appearanceTheme,
   accentColor: DEFAULT_THEME.accentColor,
   customColorHistory: [],
@@ -70,6 +72,8 @@ let settings = {
   pageClickCommand: [],
   scrollHoldCommand: [],
   bookmarkCommand: 'leftNextRightPrev',
+  bookCardCoverOnly: false,
+  bookCardSquareCorner: false,
 };
 
 // ===== 個人主題暫存狀態 =====
@@ -471,13 +475,13 @@ function renderLibrarySection() {
     </div>
 
     <div class="settings-group">
-      <div class="settings-label">書籍排序方式</div>
+      <div class="settings-label">書籍排序</div>
       <div class="settings-check-list" id="book-sort-options">
         <button class="settings-check-option" data-sort-mode="none" type="button">
           <span class="settings-checkbox ${currentSortMode === 'none' ? 'checked' : ''}">
             ${currentSortMode === 'none' ? '✓' : ''}
           </span>
-          <span>無優先排序的書籍</span>
+          <span>無特定排序</span>
         </button>
 
         <button class="settings-check-option" data-sort-mode="favorite" type="button">
@@ -562,6 +566,9 @@ function renderAppearanceSection() {
   const appliedAccentColor = getCurrentAppliedAccentColor();
   const savedButtonColor = getCurrentSavedButtonColor();
   const previewAccentColor = appearancePendingAccentColor || effectiveAccentColor;
+  const bookCardCoverOnly = Boolean(settings.bookCardCoverOnly);
+  const bookCardSquareCorner = Boolean(settings.bookCardSquareCorner);
+  const isDefaultBookCardStyle = !bookCardCoverOnly && !bookCardSquareCorner;
 
   const customSlots = Array.from(
     { length: 5 },
@@ -581,30 +588,6 @@ function renderAppearanceSection() {
 
   settingsContent.innerHTML = `
     <h1 class="settings-section-title">個人化</h1>
-
-    <div class="settings-group">
-      <div class="settings-label">系統主題</div>
-
-      <div class="appearance-theme-grid">
-        <button
-          class="appearance-theme-option ${effectiveTheme === 'light' ? 'selected' : ''}"
-          id="appearance-theme-light-btn"
-          type="button">
-          <span class="appearance-theme-preview appearance-light-preview">A</span>
-          <span>淺色調</span>
-        </button>
-
-        <button
-          class="appearance-theme-option ${effectiveTheme === 'dark' ? 'selected' : ''}"
-          id="appearance-theme-dark-btn"
-          type="button">
-          <span class="appearance-theme-preview appearance-dark-preview">A</span>
-          <span>深色調</span>
-        </button>
-      </div>
-
-      <div class="settings-hint">選擇系統的主題色調</div>
-    </div>
 
     <div class="settings-group">
       <div class="settings-label">個人主題</div>
@@ -691,6 +674,37 @@ function renderAppearanceSection() {
         選擇個人主題顏色，可以自訂與保存顏色，須按下 " 套用 " 才會生效
       </div>
     </div>
+    
+    <div class="settings-group">
+  <div class="settings-label">書卡樣式</div>
+
+  <div class="settings-check-list" id="book-card-options">
+    <button class="settings-check-option" data-book-card-option="normal" type="button">
+      <span class="settings-checkbox ${isDefaultBookCardStyle ? 'checked' : ''}">
+        ${isDefaultBookCardStyle ? '✓' : ''}
+      </span>
+      <span>含書名 / 圓角</span>
+    </button>
+
+    <button class="settings-check-option" data-book-card-option="coverOnly" type="button">
+      <span class="settings-checkbox ${bookCardCoverOnly ? 'checked' : ''}">
+        ${bookCardCoverOnly ? '✓' : ''}
+      </span>
+      <span>無書名</span>
+    </button>
+
+    <button class="settings-check-option" data-book-card-option="squareCorner" type="button">
+      <span class="settings-checkbox ${bookCardSquareCorner ? 'checked' : ''}">
+        ${bookCardSquareCorner ? '✓' : ''}
+      </span>
+      <span>直角</span>
+    </button>
+  </div>
+
+  <div class="settings-hint">
+    選擇書卡的樣式
+  </div>
+</div>
 
     <div class="settings-group">
       <div class="settings-label">背景</div>
@@ -770,8 +784,6 @@ function renderAppearanceSection() {
  * 綁定「個人化」區塊事件
  */
 function bindAppearanceSectionEvents() {
-  const lightBtn = document.getElementById('appearance-theme-light-btn');
-  const darkBtn = document.getElementById('appearance-theme-dark-btn');
   const colorButtons = settingsContent.querySelectorAll('[data-accent-color]');
   const customHistoryButtons = settingsContent.querySelectorAll('[data-custom-history-index]');
   const savedHistoryButtons = settingsContent.querySelectorAll('[data-saved-history-index]');
@@ -782,22 +794,6 @@ function bindAppearanceSectionEvents() {
   const blurRange = document.getElementById('background-blur-range');
   const opacityTooltip = document.getElementById('background-opacity-tooltip');
   const blurTooltip = document.getElementById('background-blur-tooltip');
-
-  lightBtn?.addEventListener('click', async () => {
-    settings.appearanceTheme = 'light';
-    settings = await window.readerAPI.saveAppSettings(settings);
-    resetAppearanceDraftState();
-    applySavedTheme();
-    renderAppearanceSection();
-  });
-
-  darkBtn?.addEventListener('click', async () => {
-    settings.appearanceTheme = 'dark';
-    settings = await window.readerAPI.saveAppSettings(settings);
-    resetAppearanceDraftState();
-    applySavedTheme();
-    renderAppearanceSection();
-  });
 
   colorButtons.forEach((button) => {
     button.addEventListener('click', () => {
@@ -910,6 +906,29 @@ function bindAppearanceSectionEvents() {
 
     resetAppearanceDraftState();
     applySavedTheme();
+    renderAppearanceSection();
+  });
+
+  document.getElementById('book-card-options')?.addEventListener('click', async (event) => {
+    const option = event.target.closest('[data-book-card-option]');
+    if (!option) return;
+
+    const value = option.dataset.bookCardOption || 'normal';
+
+    if (value === 'normal') {
+      settings.bookCardCoverOnly = false;
+      settings.bookCardSquareCorner = false;
+    }
+
+    if (value === 'coverOnly') {
+      settings.bookCardCoverOnly = !settings.bookCardCoverOnly;
+    }
+
+    if (value === 'squareCorner') {
+      settings.bookCardSquareCorner = !settings.bookCardSquareCorner;
+    }
+
+    settings = await window.readerAPI.saveAppSettings(settings);
     renderAppearanceSection();
   });
 
@@ -1423,20 +1442,103 @@ function renderAutoplaySection() {
   });
 }
 
-// ===== 各區塊渲染：全螢幕 =====
+// ===== 各區塊渲染：系統 =====
 /**
- * 渲染「全螢幕」區塊
+ * 渲染「系統」區塊
  */
-function renderFullscreenSection() {
+function renderSystemSection() {
+  const effectiveTheme = getEffectiveAppearanceTheme();
+  const currentLanguage = normalizeLanguage(settings.language);
+
   settingsContent.innerHTML = `
-    <h1 class="settings-section-title">全螢幕</h1>
-    <p class="settings-hint">
-      書庫頁與設定頁右上角的全螢幕按鈕功能一致。進入全螢幕後，按鍵盤 Esc 可以離開全螢幕。
-    </p>
-    <div class="settings-empty">
-      目前這個項目先提供操作說明，之後可再加入更多全螢幕細項。
+    <h1 class="settings-section-title">系統</h1>
+
+    <div class="settings-group">
+      <div class="settings-label">系統主題</div>
+
+      <div class="appearance-theme-grid">
+        <button
+          class="appearance-theme-option ${effectiveTheme === 'light' ? 'selected' : ''}"
+          id="system-theme-light-btn"
+          type="button">
+          <span class="appearance-theme-preview appearance-light-preview">A</span>
+          <span>淺色調</span>
+        </button>
+
+        <button
+          class="appearance-theme-option ${effectiveTheme === 'dark' ? 'selected' : ''}"
+          id="system-theme-dark-btn"
+          type="button">
+          <span class="appearance-theme-preview appearance-dark-preview">A</span>
+          <span>深色調</span>
+        </button>
+      </div>
+
+      <div class="settings-hint">選擇系統的主題色調</div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-label">偏好語言</div>
+
+      <div class="system-language-row">
+        <select id="preferred-language-select" class="settings-input settings-select">
+          <option value="zh-TW" ${currentLanguage === 'zh-TW' ? 'selected' : ''}>繁體中文</option>
+          <option value="ja" ${currentLanguage === 'ja' ? 'selected' : ''}>日本語</option>
+          <option value="en" ${currentLanguage === 'en' ? 'selected' : ''}>English</option>
+        </select>
+
+        <button id="preferred-language-apply-btn" class="settings-action-button system-apply-button" type="button">
+          套用
+        </button>
+      </div>
+
+      <div class="settings-hint">選擇偏好的語言，須按下 " 套用 " 才會生效</div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-label">全螢幕</div>
+      <p class="settings-hint">
+        書庫頁與設定頁右上角的全螢幕按鈕功能一致。進入全螢幕後，按鍵盤 Esc 可以離開全螢幕。
+      </p>
+      <div class="settings-empty">
+        這個位置先放系統層級操作說明；之後也可以改成快取清理、啟動頁面或資料備份。
+      </div>
     </div>
   `;
+
+  bindSystemSectionEvents();
+}
+
+/**
+ * 綁定「系統」區塊事件
+ */
+function bindSystemSectionEvents() {
+  document.getElementById('system-theme-light-btn')?.addEventListener('click', async () => {
+    settings.appearanceTheme = 'light';
+    settings = await window.readerAPI.saveAppSettings(settings);
+    resetAppearanceDraftState();
+    applySavedTheme();
+    renderSystemSection();
+  });
+
+  document.getElementById('system-theme-dark-btn')?.addEventListener('click', async () => {
+    settings.appearanceTheme = 'dark';
+    settings = await window.readerAPI.saveAppSettings(settings);
+    resetAppearanceDraftState();
+    applySavedTheme();
+    renderSystemSection();
+  });
+
+  document.getElementById('preferred-language-apply-btn')?.addEventListener('click', async () => {
+    const select = document.getElementById('preferred-language-select');
+    const nextLanguage = normalizeLanguage(select?.value);
+
+    settings.language = nextLanguage;
+    document.documentElement.lang = nextLanguage === 'zh-TW' ? 'zh-Hant' : nextLanguage;
+    settings = await window.readerAPI.saveAppSettings(settings);
+
+    renderSystemSection();
+  });
 }
 
 /**
@@ -1465,7 +1567,13 @@ function renderSection() {
     return;
   }
 
-  renderFullscreenSection();
+  if (activeSection === 'system') {
+    renderSystemSection();
+    return;
+  }
+
+  activeSection = 'library';
+  renderLibrarySection();
 }
 
 // ===== 初始化資料 =====
@@ -1493,6 +1601,7 @@ async function loadInitialState() {
     readingHistoryVisibility: appSettings?.readingHistoryVisibility === 'shown'
       ? 'shown'
       : 'hidden',
+    language: normalizeLanguage(appSettings?.language),
     appearanceTheme: appSettings?.appearanceTheme === 'light'
       ? 'light'
       : DEFAULT_THEME.appearanceTheme,
@@ -1529,6 +1638,8 @@ async function loadInitialState() {
       appSettings?.bookmarkCommand === 'leftPrevRightNext'
         ? 'leftPrevRightNext'
         : 'leftNextRightPrev',
+    bookCardCoverOnly: Boolean(appSettings?.bookCardCoverOnly),
+    bookCardSquareCorner: Boolean(appSettings?.bookCardSquareCorner),
   };
 
   appearanceCustomHistory = [...settings.customColorHistory];

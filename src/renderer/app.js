@@ -75,6 +75,8 @@ let appSettings = {
   backgroundOpacity: 16,
   backgroundBlur: 2,
   language: 'en',
+  bookCardCoverOnly: false,
+  bookCardSquareCorner: false,
 };
 
 // ===== 封面尺寸設定 =====
@@ -158,6 +160,18 @@ function clampNumber(value, min, max, fallback) {
 function formatLabel(label, value) {
   const separator = appSettings.language === 'en' ? ': ' : '：';
   return `${label}${separator}${value}`;
+}
+
+function applyBookCardStyleSettings() {
+  document.body.classList.toggle(
+    'book-card-cover-only',
+    Boolean(appSettings.bookCardCoverOnly)
+  );
+
+  document.body.classList.toggle(
+    'book-card-square-corner',
+    Boolean(appSettings.bookCardSquareCorner)
+  );
 }
 
 function getCurrentBookCardWidth() {
@@ -1562,6 +1576,8 @@ async function loadAppSettings() {
       backgroundOpacity: clampNumber(settings?.backgroundOpacity, 0, 100, 16),
       backgroundBlur: clampNumber(settings?.backgroundBlur, 0, 40, 2),
       language: settings?.language || 'en',
+      bookCardCoverOnly: settings?.bookCardCoverOnly === true,
+      bookCardSquareCorner: settings?.bookCardSquareCorner === true,
     };
     i18n = createI18n(appSettings.language);
   } catch (error) {
@@ -1570,6 +1586,7 @@ async function loadAppSettings() {
 
   renderLibraryTitle();
   applyAppTheme(document.documentElement, appSettings);
+  applyBookCardStyleSettings();
 }
 
 /**
@@ -1637,10 +1654,13 @@ window.readerAPI?.onAppSettingsUpdated?.(async (nextSettings) => {
     backgroundOpacity: clampNumber(nextSettings?.backgroundOpacity, 0, 100, 16),
     backgroundBlur: clampNumber(nextSettings?.backgroundBlur, 0, 40, 2),
     language: nextSettings?.language || appSettings.language || 'en',
+    bookCardCoverOnly: nextSettings?.bookCardCoverOnly === true,
+    bookCardSquareCorner: nextSettings?.bookCardSquareCorner === true,
   };
 
   i18n = createI18n(appSettings.language);
   applyAppTheme(document.documentElement, appSettings);
+  applyBookCardStyleSettings();
   updateStaticUiText();
   updateFullscreenButton();
   updateBookSearchIcon();

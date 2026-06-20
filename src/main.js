@@ -298,6 +298,8 @@ function loadAppState() {
         scrollHoldCommand: [],
         bookmarkCommand: 'leftNextRightPrev',
         language: 'en',
+        bookCardCoverOnly: false,
+        bookCardSquareCorner: false,
       },
       recentReading: [],
     }
@@ -363,6 +365,8 @@ function loadAppState() {
         language: normalizeLanguage(
           parsed.settings?.language
         ),
+        bookCardCoverOnly: parsed.settings?.bookCardCoverOnly === true,
+        bookCardSquareCorner: parsed.settings?.bookCardSquareCorner === true,
       },
     };
   } catch (error) {
@@ -394,6 +398,8 @@ function loadAppState() {
         scrollHoldCommand: [],
         bookmarkCommand: 'leftNextRightPrev',
         language: 'en',
+        bookCardCoverOnly: false,
+        bookCardSquareCorner: false,
       },
       recentReading: [],
     };
@@ -664,6 +670,8 @@ function getAppSettings() {
       state.settings?.bookmarkCommand
     ),
     language: normalizeLanguage(state.settings?.language),
+    bookCardCoverOnly: state.settings?.bookCardCoverOnly === true,
+    bookCardSquareCorner: state.settings?.bookCardSquareCorner === true,
   };
 }
 
@@ -747,6 +755,18 @@ function saveAppSettings(settings = {}) {
     language: normalizeLanguage(
       settings.language ?? state.settings?.language
     ),
+    bookCardCoverOnly:
+      settings.bookCardCoverOnly === true ||
+      (
+        settings.bookCardCoverOnly === undefined &&
+        state.settings?.bookCardCoverOnly === true
+      ),
+    bookCardSquareCorner:
+      settings.bookCardSquareCorner === true ||
+      (
+        settings.bookCardSquareCorner === undefined &&
+        state.settings?.bookCardSquareCorner === true
+      ),
   };
 
   saveAppState(state);

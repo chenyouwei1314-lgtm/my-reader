@@ -17,25 +17,25 @@ html, body {
   --myreader-scrollbar-size: 12px;
   --myreader-scrollbar-radius: 999px;
   --myreader-scrollbar-track: rgba(255, 255, 255, 0.10);
-  --myreader-scrollbar-track-hover: rgba(255, 255, 255, 0.14);
-  --myreader-scrollbar-thumb: #666666;
-  --myreader-scrollbar-thumb-hover: #666666;
+  --myreader-scrollbar-track-hover: rgba(255, 255, 255, 0.16);
+  --myreader-scrollbar-thumb: #ffcc00;
+  --myreader-scrollbar-thumb-hover: #ffcc00;
   --myreader-scrollbar-border: rgba(255, 255, 255, 0.08);
 
   --reader-toolbar-height: 50px;
 
-  --theme-accent: #666666;
-  --theme-app-bg: #111111;
+  --theme-accent: #ffcc00;
+  --theme-app-bg: #202020;
   --theme-text: #ffffff;
   --theme-muted-text: #d0d0d0;
-  --theme-panel-bg: rgba(18, 18, 18, 0.96);
+  --theme-panel-bg: rgba(10, 10, 10, 0.35);
   --theme-surface-bg: rgba(255, 255, 255, 0.08);
   --theme-surface-bg-strong: rgba(255, 255, 255, 0.12);
-  --theme-border: rgba(255, 255, 255, 0.08);
-  --theme-toolbar-bg: rgba(20, 20, 20, 0.95);
+  --theme-border: rgba(255, 255, 255, 0.10);
+  --theme-toolbar-bg: rgba(10, 10, 10, 0.95);
   --theme-input-bg: rgba(255, 255, 255, 0.08);
   --theme-input-border: rgba(255, 255, 255, 0.20);
-  --theme-button-text: #ffffff;
+  --theme-button-text: #111111;
 
   --theme-favorite: #ff4f9a;
   --theme-pdf-page-bg: #ffffff;
@@ -479,6 +479,45 @@ button:hover {
 .recent-reading-divider {
   height: 2px;
   background: var(--theme-border);
+}
+
+/* ===== 書卡顯示風格 ===== */
+
+/* 只顯示書籍封面：主書牆 */
+.book-card-cover-only .book-card {
+  flex: 0 0 auto;
+}
+
+.book-card-cover-only .book-title {
+  display: none;
+}
+
+/* 只顯示書籍封面：最近閱讀 */
+.book-card-cover-only .recent-book-card {
+  padding-bottom: 0;
+}
+
+.book-card-cover-only .recent-book-title {
+  display: none;
+}
+
+/* 直角風格：主書牆 */
+.book-card-square-corner .book-card,
+.book-card-square-corner .book-card.selected::after,
+.book-card-square-corner .book-cover {
+  border-radius: 0;
+}
+
+/* 直角風格：最近閱讀 */
+.book-card-square-corner .recent-book-card,
+.book-card-square-corner .recent-book-card.selected::after,
+.book-card-square-corner .recent-book-cover {
+  border-radius: 0;
+}
+
+/* 直角風格：右側詳細封面也可以一起直角，想只影響書卡可刪掉這段 */
+.book-card-square-corner .detail-cover {
+  border-radius: 0;
 }
 
 /* ===== 共用捲軸風格：index / setting ===== */
