@@ -574,13 +574,15 @@ function getLastLibraryFolder() {
   return state.lastLibraryFolder || '';
 }
 
+const MAX_LIBRARY_HISTORY = 10;
+
 function getLibraryHistory() {
   const state = loadAppState();
   const history = Array.isArray(state.libraryHistory) ? state.libraryHistory : [];
 
   return history
     .filter((folderPath) => folderPath && fs.existsSync(folderPath))
-    .slice(0, 3);
+    .slice(0, MAX_LIBRARY_HISTORY);
 }
 
 function pushLibraryHistory(folderPath) {
@@ -594,10 +596,59 @@ function pushLibraryHistory(folderPath) {
   state.libraryHistory = [
     folderPath,
     ...history.filter((item) => item !== folderPath),
-  ].slice(0, 3);
+  ].slice(0, MAX_LIBRARY_HISTORY);
 
   saveAppState(state);
   return state.libraryHistory;
+}
+
+function removeLibraryHistory(folderPath) {
+  if (!folderPath) {
+    return getLibraryHistory();
+  }
+
+  const state = loadAppState();
+  const history = Array.isArray(state.libraryHistory) ? state.libraryHistory : [];
+
+  state.libraryHistory = history.filter((item) => item !== folderPath);
+
+  saveAppState(state);
+
+  return getLibraryHistory();
+}
+
+function clearHistoryLibraryMeta(folderPath) {
+  if (!folderPath || !fs.existsSync(folderPath)) {
+    return {
+      cleared: false,
+      history: getLibraryHistory(),
+    };
+  }
+
+  const metaDir = path.join(folderPath, '.myreader');
+
+  try {
+    if (fs.existsSync(metaDir)) {
+      fs.rmSync(metaDir, {
+        recursive: true,
+        force: true,
+      });
+    }
+
+    const history = removeLibraryHistory(folderPath);
+
+    return {
+      cleared: true,
+      history,
+    };
+  } catch (error) {
+    console.error('清除歷史書庫 .myreader 失敗:', error);
+
+    return {
+      cleared: false,
+      history: getLibraryHistory(),
+    };
+  }
 }
 
 function clearAllReadingProgress() {
@@ -1353,6 +1404,10 @@ function registerFolderIpc() {
     saveLastLibraryFolder(folderPath);
     pushLibraryHistory(folderPath);
     return folderPath;
+  });
+
+  ipcMain.handle('clear-history-library-meta', async (_event, folderPath) => {
+    return clearHistoryLibraryMeta(folderPath);
   });
 }
 

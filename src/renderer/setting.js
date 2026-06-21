@@ -188,6 +188,102 @@ function bindRangeTooltip(rangeInput, tooltipEl) {
   updateRangeTooltip(rangeInput, tooltipEl);
 }
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => {
+    const map = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    };
+
+    return map[char] || char;
+  });
+}
+
+function showConfirmDialog({
+  title = '確認',
+  message = '',
+  detail = '',
+  note = '',
+  confirmText = '確認',
+  cancelText = '取消',
+} = {}) {
+  return new Promise((resolve) => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'settings-dialog-backdrop';
+
+    backdrop.innerHTML = `
+      <div class="settings-dialog" role="dialog" aria-modal="true">
+        <div class="settings-dialog-title">${escapeHtml(title)}</div>
+
+        <div class="settings-dialog-message">
+          ${escapeHtml(message)}
+        </div>
+
+        ${detail
+        ? `<div class="settings-dialog-detail">${escapeHtml(detail)}</div>`
+        : ''
+      }
+
+      ${note
+        ? `<div class="settings-dialog-note">${escapeHtml(note)}</div>`
+        : ''
+      }
+
+        <div class="settings-dialog-actions">
+          <button
+            class="settings-dialog-button settings-dialog-cancel"
+            type="button">
+            ${escapeHtml(cancelText)}
+          </button>
+
+          <button
+            class="settings-dialog-button settings-dialog-confirm"
+            type="button">
+            ${escapeHtml(confirmText)}
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(backdrop);
+
+    const cancelBtn = backdrop.querySelector('.settings-dialog-cancel');
+    const confirmBtn = backdrop.querySelector('.settings-dialog-confirm');
+
+    const close = (result) => {
+      backdrop.remove();
+      resolve(result);
+    };
+
+    cancelBtn?.addEventListener('click', () => close(false));
+    confirmBtn?.addEventListener('click', () => close(true));
+
+    backdrop.addEventListener('click', (event) => {
+      if (event.target === backdrop) {
+        close(false);
+      }
+    });
+
+    const handleKeydown = (event) => {
+      if (event.key === 'Escape') {
+        document.removeEventListener('keydown', handleKeydown);
+        close(false);
+      }
+
+      if (event.key === 'Enter') {
+        document.removeEventListener('keydown', handleKeydown);
+        close(true);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeydown);
+    confirmBtn?.focus();
+  });
+}
+
 // ===== 主題工具 =====
 /**
  * 取得目前應顯示的系統主題
@@ -665,13 +761,13 @@ function renderAppearanceSection() {
             class="appearance-apply-btn"
             type="button"
             style="background:${appliedAccentColor}; color:${getAppearanceButtonTextColor(appliedAccentColor)};">
-            套用
+            確認
           </button>
         </div>
       </div>
 
       <div class="settings-hint">
-        選擇個人主題顏色，可以自訂與保存顏色，須按下 " 套用 " 才會生效
+        選擇個人主題顏色，可以自訂與保存顏色，須按下 " 確認 " 才會生效
       </div>
     </div>
     
@@ -997,6 +1093,7 @@ function renderHistorySection() {
   const historyPath3 = visibleHistoryPaths[2] || '目前沒有紀錄';
 
   const canOpenHistoryFolder = Boolean(pendingHistoryLibraryPath);
+  const canClearHistoryLibraryMeta = Boolean(pendingHistoryLibraryPath);
   const canClearReadingProgress = Boolean(clearReadingProgressChecked);
 
   settingsContent.innerHTML = `
@@ -1047,8 +1144,18 @@ function renderHistorySection() {
           開啟歷史書庫資料夾
         </button>
       </div>
+      
+      <div class="settings-block">
+  <button
+    id="clear-history-library-meta-btn"
+    class="settings-action-button settings-control danger-button"
+    type="button"
+    ${canClearHistoryLibraryMeta ? '' : 'disabled'}>
+    清除歷史書庫資料夾
+  </button>
+</div>
 
-      <div class="settings-hint">確認選擇其中一個歷史書庫後，按下按鈕開啟</div>
+      <div class="settings-hint">確認選擇其中一個歷史書庫後，按下按鈕開啟或清除</div>
     </div>
 
     <div class="settings-group">
@@ -1137,6 +1244,32 @@ function renderHistorySection() {
     await applyLibraryChange(openedPath);
 
     resetHistoryDraftState();
+    renderSection();
+  });
+
+  document.getElementById('clear-history-library-meta-btn')?.addEventListener('click', async () => {
+    if (!pendingHistoryLibraryPath) return;
+
+    const confirmed = await showConfirmDialog({
+      title: '清除歷史書庫',
+      message: '確認要清除這個書庫嗎？',
+      detail: pendingHistoryLibraryPath,
+      note: '這只會刪除在該書庫建立的 .myreader 資料夾，不會刪除 PDF / CBZ 書籍檔案。',
+      confirmText: '確認',
+      cancelText: '取消',
+    });
+
+    if (!confirmed) return;
+
+    const result = await window.readerAPI.clearHistoryLibraryMeta?.(pendingHistoryLibraryPath);
+
+    if (!result?.cleared) return;
+
+    libraryHistoryPaths = Array.isArray(result.history)
+      ? result.history
+      : await window.readerAPI.getLibraryHistory?.() || [];
+
+    pendingHistoryLibraryPath = '';
     renderSection();
   });
 
@@ -1488,21 +1621,18 @@ function renderSystemSection() {
         </select>
 
         <button id="preferred-language-apply-btn" class="settings-action-button system-apply-button" type="button">
-          套用
+          確認
         </button>
       </div>
 
-      <div class="settings-hint">選擇偏好的語言，須按下 " 套用 " 才會生效</div>
+      <div class="settings-hint">選擇偏好的語言，須按下 " 確認 " 才會生效</div>
     </div>
 
     <div class="settings-group">
-      <div class="settings-label">全螢幕</div>
-      <p class="settings-hint">
-        書庫頁與設定頁右上角的全螢幕按鈕功能一致。進入全螢幕後，按鍵盤 Esc 可以離開全螢幕。
-      </p>
-      <div class="settings-empty">
-        這個位置先放系統層級操作說明；之後也可以改成快取清理、啟動頁面或資料備份。
-      </div>
+      <div class="settings-label">軟體資訊</div>
+      <p class="settings-hint">名稱：AirWei Reader</p>
+      <p class="settings-hint">作者：Youwei, Taiwan</p>
+      <p class="settings-hint">內容：AirWei Reader 是一款本機 PDF / CBZ 閱讀器，支援書庫管理</p>
     </div>
   `;
 

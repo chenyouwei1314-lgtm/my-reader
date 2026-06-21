@@ -79,4 +79,6 @@ contextBridge.exposeInMainWorld('readerAPI', {
   pushLibraryHistory: (folderPath) => ipcRenderer.invoke('push-library-history', folderPath),
   openHistoryLibraryFolder: (folderPath) =>
     ipcRenderer.invoke('open-history-library-folder', folderPath),
+  clearHistoryLibraryMeta: (folderPath) =>
+    ipcRenderer.invoke('clear-history-library-meta', folderPath),
 });

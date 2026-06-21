@@ -78,14 +78,14 @@ body {
   justify-self: center;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 15px;
 }
 
 .toolbar-right {
   justify-self: end;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 15px;
 }
 
 .toolbar-btn,
@@ -108,7 +108,7 @@ body {
 
 .toolbar-btn {
   padding: 0 16px 0 8px;
-  gap: 8px;
+  gap: 10px;
   font-size: 14px;
 }
 

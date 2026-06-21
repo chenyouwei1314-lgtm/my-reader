@@ -94,7 +94,7 @@ button:hover {
 .topbar-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 15px;
   min-width: 0;
 }
 
@@ -109,7 +109,7 @@ button:hover {
 .toolbar-btn {
   padding: 0 16px 0 8px;
   font-size: 14px;
-  gap: 8px;
+  gap: 10px;
 }
 
 .toolbar-icon-btn {
@@ -355,7 +355,7 @@ button:hover {
 .settings-inline {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .settings-value-button,
@@ -863,4 +863,87 @@ input[type="range"]::-moz-range-thumb {
 .system-apply-button {
   width: 90px;
   min-width: 90px;
+}
+
+/* =========================================================
+   Settings Dialog
+   ========================================================= */
+.settings-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+}
+
+.settings-dialog {
+  width: min(560px, 100%);
+  border-radius: 15px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-panel-bg);
+  color: var(--theme-text);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.settings-dialog-title {
+  padding: 10px 20px;
+  font-size: 20px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--theme-border);
+  background: var(--theme-toolbar-bg);
+}
+
+.settings-dialog-message {
+  padding: 10px 30px; 
+  font-size: 16px;
+}
+
+.settings-dialog-detail {
+  margin: 0 30px;
+  height: 40px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--theme-input-border);
+  background: var(--theme-surface-bg);
+  color: var(--theme-muted-text);
+  font-family: "Microsoft JhengHei", sans-serif;
+  font-size: 16px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.settings-dialog-note {
+  margin: 10px 30px;
+  color: var(--theme-muted-text);
+  font-size: 16px;
+}
+
+.settings-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 15px 30px;
+  border-top: 1px solid var(--theme-border);
+}
+
+.settings-dialog-button {
+  width: 90px;
+  height: 40px;
+  font-size: 16px;
+}
+
+.settings-dialog-cancel {
+  background: var(--theme-surface-bg);
+  color: var(--theme-text);
+  border: 1px solid var(--theme-input-border);
+}
+
+.settings-dialog-confirm {
+  background: var(--theme-accent);
+  color: var(--theme-button-text);
 }
