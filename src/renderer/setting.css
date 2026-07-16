@@ -903,9 +903,19 @@ input[type="range"]::-moz-range-thumb {
   font-size: 16px;
 }
 
-.settings-dialog-detail {
+.settings-dialog-control-row {
+  width: calc(100% - 60px);
   margin: 0 30px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-dialog-detail {
+  flex: 1;
+  min-width: 0;
   height: 40px;
+  margin: 0;
   padding: 10px 16px;
   border-radius: 10px;
   border: 1px solid var(--theme-input-border);
@@ -913,26 +923,30 @@ input[type="range"]::-moz-range-thumb {
   color: var(--theme-muted-text);
   font-family: "Microsoft JhengHei", sans-serif;
   font-size: 16px;
-  white-space: pre-wrap;
-  word-break: break-all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.settings-dialog-detail-spacer {
+  flex: 1;
+  min-width: 0;
 }
 
 .settings-dialog-note {
-  margin: 10px 30px;
+  margin: 10px 30px 15px 30px;
   color: var(--theme-muted-text);
   font-size: 16px;
+  line-height: 1.5;
 }
 
 .settings-dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 15px 30px;
-  border-top: 1px solid var(--theme-border);
+  display: none;
 }
 
 .settings-dialog-button {
   width: 90px;
+  min-width: 90px;
   height: 40px;
   font-size: 16px;
 }

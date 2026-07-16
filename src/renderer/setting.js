@@ -216,37 +216,37 @@ function showConfirmDialog({
 
     backdrop.innerHTML = `
       <div class="settings-dialog" role="dialog" aria-modal="true">
-        <div class="settings-dialog-title">${escapeHtml(title)}</div>
+      <div class="settings-dialog-title">${escapeHtml(title)}</div>
 
-        <div class="settings-dialog-message">
-          ${escapeHtml(message)}
-        </div>
+      <div class="settings-dialog-message">
+        ${escapeHtml(message)}
+      </div>
 
+      <div class="settings-dialog-control-row">
         ${detail
-        ? `<div class="settings-dialog-detail">${escapeHtml(detail)}</div>`
-        : ''
-      }
+          ? `<div class="settings-dialog-detail">${escapeHtml(detail)}</div>`
+          : '<div class="settings-dialog-detail-spacer"></div>'
+        }
+
+        <button
+          class="settings-dialog-button settings-dialog-cancel"
+          type="button">
+          ${escapeHtml(cancelText)}
+        </button>
+
+        <button
+          class="settings-dialog-button settings-dialog-confirm"
+          type="button">
+          ${escapeHtml(confirmText)}
+        </button>
+      </div>
 
       ${note
         ? `<div class="settings-dialog-note">${escapeHtml(note)}</div>`
         : ''
       }
-
-        <div class="settings-dialog-actions">
-          <button
-            class="settings-dialog-button settings-dialog-cancel"
-            type="button">
-            ${escapeHtml(cancelText)}
-          </button>
-
-          <button
-            class="settings-dialog-button settings-dialog-confirm"
-            type="button">
-            ${escapeHtml(confirmText)}
-          </button>
-        </div>
-      </div>
-    `;
+    </div>
+  `;
 
     document.body.appendChild(backdrop);
 

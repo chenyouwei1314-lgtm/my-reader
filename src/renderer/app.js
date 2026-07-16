@@ -2,7 +2,7 @@ import './app.css';
 import * as pdfjsLib from 'pdfjs-dist';
 import { unzipSync } from 'fflate';
 import themeModule from './theme';
-import { createI18n } from './i18n';
+import { createI18n, normalizeLanguage } from './i18n';
 
 const {
   DEFAULT_THEME,
@@ -75,6 +75,7 @@ let appSettings = {
   backgroundOpacity: 16,
   backgroundBlur: 2,
   language: 'en',
+  languageInitialized: false,
   bookCardCoverOnly: false,
   bookCardSquareCorner: false,
 };
@@ -160,6 +161,225 @@ function clampNumber(value, min, max, fallback) {
 function formatLabel(label, value) {
   const separator = appSettings.language === 'en' ? ': ' : '：';
   return `${label}${separator}${value}`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => {
+    const map = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    };
+
+    return map[char] || char;
+  });
+}
+
+function applyDocumentLanguage(language) {
+  const safeLanguage = normalizeLanguage(language);
+
+  document.documentElement.lang =
+    safeLanguage === 'zh-TW' ? 'zh-Hant' : safeLanguage;
+}
+
+function applyAppBodyThemeClass() {
+  const isLight = appSettings.appearanceTheme === 'light';
+
+  document.body.classList.toggle('light-theme', isLight);
+  document.body.classList.toggle('dark-theme', !isLight);
+}
+
+const INITIAL_LANGUAGE_SETTINGS_ICON = `
+  <span class="initial-language-inline-icon" aria-hidden="true">
+    <svg viewBox="0 -960 960 960">
+      <path
+        d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm112-260q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Z"
+        fill="currentColor">
+      </path>
+    </svg>
+  </span>
+`;
+
+const INITIAL_LANGUAGE_SYSTEM_ICON = `
+  <span class="initial-language-inline-icon" aria-hidden="true">
+    <svg viewBox="0 -960 960 960">
+      <path
+        d="M40-120v-80h880v80H40Zm120-120q-33 0-56.5-23.5T80-320v-440q0-33 23.5-56.5T160-840h640q33 0 56.5 23.5T880-760v440q0 33-23.5 56.5T800-240H160Zm0-80h640v-440H160v440Zm0 0v-440 440Z"
+        fill="currentColor">
+      </path>
+    </svg>
+  </span>
+`;
+
+function getInitialLanguageDialogText(language) {
+  const safeLanguage = normalizeLanguage(language);
+
+  const textMap = {
+    'zh-TW': {
+      title: '選擇語言',
+      message: '請先選擇偏好的語言',
+      confirm: '確認',
+      noteHtml: `
+        <span class="initial-language-note-line">
+          之後可到
+          ${INITIAL_LANGUAGE_SETTINGS_ICON}
+          /
+          ${INITIAL_LANGUAGE_SYSTEM_ICON}
+          進行更改
+        </span>
+      `,
+    },
+
+    ja: {
+      title: '言語を選択',
+      message: '使用する言語を選択してください',
+      confirm: '確認',
+      noteHtml: `
+        <span class="initial-language-note-line">
+          後で
+          ${INITIAL_LANGUAGE_SETTINGS_ICON}
+          /
+          ${INITIAL_LANGUAGE_SYSTEM_ICON}
+          から変更できます
+        </span>
+      `,
+    },
+
+    en: {
+      title: 'Choose Language',
+      message: 'Please choose your preferred language',
+      confirm: 'Confirm',
+      noteHtml: `
+        <span class="initial-language-note-line">
+          You can change it later in
+          ${INITIAL_LANGUAGE_SETTINGS_ICON}
+          /
+          ${INITIAL_LANGUAGE_SYSTEM_ICON}
+        </span>
+      `,
+    },
+  };
+
+  return textMap[safeLanguage] || textMap.en;
+}
+
+function showInitialLanguageDialog() {
+  return new Promise((resolve) => {
+    let currentLanguage = 'en';
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'settings-dialog-backdrop initial-language-backdrop';
+
+    backdrop.innerHTML = `
+      <div class="settings-dialog initial-language-dialog" role="dialog" aria-modal="true">
+        <div class="settings-dialog-title" id="initial-language-title"></div>
+
+        <div class="settings-dialog-message" id="initial-language-message"></div>
+
+        <div class="initial-language-row">
+          <select id="initial-language-select" class="settings-input settings-select">
+            <option value="zh-TW">繁體中文</option>
+            <option value="ja">日本語</option>
+            <option value="en">English</option>
+          </select>
+
+          <button
+            id="initial-language-confirm-btn"
+            class="settings-action-button system-apply-button"
+            type="button">
+          </button>
+        </div>
+
+        <div class="settings-dialog-note" id="initial-language-note"></div>
+      </div>
+    `;
+
+    document.body.appendChild(backdrop);
+
+    const titleEl = backdrop.querySelector('#initial-language-title');
+    const messageEl = backdrop.querySelector('#initial-language-message');
+    const noteEl = backdrop.querySelector('#initial-language-note');
+    const select = backdrop.querySelector('#initial-language-select');
+    const confirmBtn = backdrop.querySelector('#initial-language-confirm-btn');
+
+    const renderDialogLanguage = (language) => {
+      currentLanguage = normalizeLanguage(language);
+      const dialogText = getInitialLanguageDialogText(currentLanguage);
+
+      if (titleEl) {
+        titleEl.textContent = dialogText.title;
+      }
+
+      if (messageEl) {
+        messageEl.textContent = dialogText.message;
+      }
+
+      if (confirmBtn) {
+        confirmBtn.textContent = dialogText.confirm;
+      }
+
+      if (noteEl) {
+        noteEl.innerHTML = dialogText.noteHtml || escapeHtml(dialogText.note || '');
+      }
+
+      document.documentElement.lang =
+        currentLanguage === 'zh-TW' ? 'zh-Hant' : currentLanguage;
+    };
+
+    select.value = 'en';
+    renderDialogLanguage('en');
+
+    select?.addEventListener('change', (event) => {
+      renderDialogLanguage(event.target.value);
+    });
+
+    const confirm = () => {
+      const nextLanguage = normalizeLanguage(select?.value || currentLanguage);
+      backdrop.remove();
+      resolve(nextLanguage);
+    };
+
+    confirmBtn?.addEventListener('click', confirm);
+
+    select?.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        confirm();
+      }
+    });
+
+    confirmBtn?.focus();
+  });
+}
+
+async function showInitialLanguageDialogIfNeeded() {
+  if (appSettings.languageInitialized === true) {
+    return;
+  }
+
+  const nextLanguage = await showInitialLanguageDialog();
+
+  appSettings.language = nextLanguage;
+  appSettings.languageInitialized = true;
+
+  applyDocumentLanguage(nextLanguage);
+  i18n = createI18n(nextLanguage);
+
+  if (window.readerAPI?.saveAppSettings) {
+    const savedSettings = await window.readerAPI.saveAppSettings(appSettings);
+
+    appSettings = {
+      ...appSettings,
+      ...savedSettings,
+      language: normalizeLanguage(savedSettings?.language || nextLanguage),
+      languageInitialized: savedSettings?.languageInitialized === true,
+    };
+
+    i18n = createI18n(appSettings.language);
+    applyDocumentLanguage(appSettings.language);
+  }
 }
 
 function applyBookCardStyleSettings() {
@@ -1576,16 +1796,19 @@ async function loadAppSettings() {
       backgroundOpacity: clampNumber(settings?.backgroundOpacity, 0, 100, 16),
       backgroundBlur: clampNumber(settings?.backgroundBlur, 0, 40, 2),
       language: settings?.language || 'en',
+      languageInitialized: settings?.languageInitialized === true,
       bookCardCoverOnly: settings?.bookCardCoverOnly === true,
       bookCardSquareCorner: settings?.bookCardSquareCorner === true,
     };
     i18n = createI18n(appSettings.language);
+    applyDocumentLanguage(appSettings.language);
   } catch (error) {
     console.error('讀取設定失敗:', error);
   }
 
   renderLibraryTitle();
   applyAppTheme(document.documentElement, appSettings);
+  applyAppBodyThemeClass();
   applyBookCardStyleSettings();
 }
 
@@ -1653,13 +1876,18 @@ window.readerAPI?.onAppSettingsUpdated?.(async (nextSettings) => {
     backgroundImagePath: nextSettings?.backgroundImagePath || '',
     backgroundOpacity: clampNumber(nextSettings?.backgroundOpacity, 0, 100, 16),
     backgroundBlur: clampNumber(nextSettings?.backgroundBlur, 0, 40, 2),
-    language: nextSettings?.language || appSettings.language || 'en',
+    language: normalizeLanguage(nextSettings?.language || appSettings.language),
+    languageInitialized:
+      nextSettings?.languageInitialized === true ||
+      appSettings.languageInitialized === true,
     bookCardCoverOnly: nextSettings?.bookCardCoverOnly === true,
     bookCardSquareCorner: nextSettings?.bookCardSquareCorner === true,
   };
 
   i18n = createI18n(appSettings.language);
   applyAppTheme(document.documentElement, appSettings);
+  applyDocumentLanguage(appSettings.language);
+  applyAppBodyThemeClass();
   applyBookCardStyleSettings();
   updateStaticUiText();
   updateFullscreenButton();
@@ -1806,9 +2034,11 @@ window.addEventListener('resize', () => {
 // ===== 初始化 =====
 async function initApp() {
   await loadAppSettings();
+  await showInitialLanguageDialogIfNeeded();
   updateStaticUiText();
   updateFullscreenButton();
   updateBookSearchIcon();
+  renderLibraryTitle();
   await restoreLastLibrary();
   await applyPageBackground();
   setupRecentBookCardWidthSync();

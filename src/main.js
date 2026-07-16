@@ -298,6 +298,7 @@ function loadAppState() {
         scrollHoldCommand: [],
         bookmarkCommand: 'leftNextRightPrev',
         language: 'en',
+        languageInitialized: false,
         bookCardCoverOnly: false,
         bookCardSquareCorner: false,
       },
@@ -365,6 +366,7 @@ function loadAppState() {
         language: normalizeLanguage(
           parsed.settings?.language
         ),
+        languageInitialized: parsed.settings?.languageInitialized === true,
         bookCardCoverOnly: parsed.settings?.bookCardCoverOnly === true,
         bookCardSquareCorner: parsed.settings?.bookCardSquareCorner === true,
       },
@@ -398,6 +400,7 @@ function loadAppState() {
         scrollHoldCommand: [],
         bookmarkCommand: 'leftNextRightPrev',
         language: 'en',
+        languageInitialized: false,
         bookCardCoverOnly: false,
         bookCardSquareCorner: false,
       },
@@ -721,6 +724,7 @@ function getAppSettings() {
       state.settings?.bookmarkCommand
     ),
     language: normalizeLanguage(state.settings?.language),
+    languageInitialized: state.settings?.languageInitialized === true,
     bookCardCoverOnly: state.settings?.bookCardCoverOnly === true,
     bookCardSquareCorner: state.settings?.bookCardSquareCorner === true,
   };
@@ -806,6 +810,12 @@ function saveAppSettings(settings = {}) {
     language: normalizeLanguage(
       settings.language ?? state.settings?.language
     ),
+    languageInitialized:
+      settings.languageInitialized === true ||
+      (
+        settings.languageInitialized === undefined &&
+        state.settings?.languageInitialized === true
+      ),
     bookCardCoverOnly:
       settings.bookCardCoverOnly === true ||
       (
