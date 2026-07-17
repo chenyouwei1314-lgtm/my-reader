@@ -83,10 +83,23 @@ function t(path, params = {}) {
   return i18n.t(path, params);
 }
 
-function applyDocumentLanguage(language) {
+function getHtmlLang(language) {
   const safeLanguage = normalizeLanguage(language);
-  document.documentElement.lang =
-    safeLanguage === 'zh-TW' ? 'zh-Hant' : safeLanguage;
+  return safeLanguage === 'zh-TW' ? 'zh-Hant' : safeLanguage;
+}
+
+function applyDocumentLanguage(language) {
+  document.documentElement.lang = getHtmlLang(language);
+}
+
+function applySystemContentLanguage(language) {
+  if (!settingsContent) return;
+  settingsContent.lang = getHtmlLang(language);
+}
+
+function clearSystemContentLanguage() {
+  if (!settingsContent) return;
+  settingsContent.removeAttribute('lang');
 }
 
 function getSystemPreviewLanguage() {
@@ -1652,6 +1665,7 @@ function renderAutoplaySection() {
 function renderSystemSection() {
   const effectiveTheme = getEffectiveAppearanceTheme();
   const currentLanguage = getSystemPreviewLanguage();
+  applySystemContentLanguage(currentLanguage);
 
   settingsContent.innerHTML = `
     <h1 class="settings-section-title">${t('settings.titleSystem')}</h1>
@@ -1720,7 +1734,6 @@ function bindSystemSectionEvents() {
 
     systemLanguageDraft = nextLanguage;
     i18n = createI18n(nextLanguage);
-    applyDocumentLanguage(nextLanguage);
 
     renderSystemSection();
   });
@@ -1763,6 +1776,10 @@ function bindSystemSectionEvents() {
 function renderSection() {
   updateSettingsStaticText();
   renderMenuState();
+
+  if (activeSection !== 'system') {
+    clearSystemContentLanguage();
+  }
 
   if (activeSection === 'library') {
     renderLibrarySection();
