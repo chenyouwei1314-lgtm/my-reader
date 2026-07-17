@@ -1,6 +1,6 @@
 ﻿import './setting.css';
 import themeModule from './theme';
-import { normalizeLanguage } from './i18n';
+import { createI18n, normalizeLanguage } from './i18n';
 
 const {
   DEFAULT_THEME,
@@ -53,6 +53,7 @@ let activeSection = 'library';
 let libraryHistoryPaths = [];
 let pendingHistoryLibraryPath = '';
 let clearReadingProgressChecked = false;
+let systemLanguageDraft = '';
 
 let settings = {
   displayLibraryName: '',
@@ -76,6 +77,30 @@ let settings = {
   bookCardSquareCorner: false,
 };
 
+let i18n = createI18n(settings.language);
+
+function t(path, params = {}) {
+  return i18n.t(path, params);
+}
+
+function applyDocumentLanguage(language) {
+  const safeLanguage = normalizeLanguage(language);
+  document.documentElement.lang =
+    safeLanguage === 'zh-TW' ? 'zh-Hant' : safeLanguage;
+}
+
+function getSystemPreviewLanguage() {
+  return normalizeLanguage(systemLanguageDraft || settings.language);
+}
+
+function cancelSystemLanguagePreview() {
+  if (!systemLanguageDraft) return;
+
+  systemLanguageDraft = '';
+  i18n = createI18n(settings.language);
+  applyDocumentLanguage(settings.language);
+}
+
 // ===== 個人主題暫存狀態 =====
 let appearancePreviewTheme = null;
 let appearancePreviewAccentColor = null;
@@ -88,13 +113,19 @@ let appearanceSelectedSavedSlotIndex = -1;
 let appearanceSelectionSource = 'classic';
 
 // ===== 基本工具函式 =====
+function finishBooting() {
+  requestAnimationFrame(() => {
+    document.documentElement.classList.remove('booting');
+  });
+}
+
 /**
  * 取得目前書庫顯示名稱
  * 優先使用自訂名稱，否則顯示書庫路徑
  */
 function getDisplayLibraryName() {
   const customName = (settings.displayLibraryName || '').trim();
-  return customName || currentLibraryPath || '尚未選擇書庫';
+  return customName || currentLibraryPath || t('settings.noLibraryFolder');
 }
 
 /**
@@ -106,6 +137,33 @@ function renderMenuState() {
   items.forEach((item) => {
     item.classList.toggle('active', item.dataset.section === activeSection);
   });
+}
+
+function updateSettingsStaticText() {
+  const menuLabels = {
+    library: t('settings.titleLibrary'),
+    autoplay: t('settings.titleReading'),
+    appearance: t('settings.titleAppearance'),
+    history: t('settings.titleHistory'),
+    system: t('settings.titleSystem'),
+  };
+
+  Object.entries(menuLabels).forEach(([section, label]) => {
+    const labelEl = settingsMenu?.querySelector(
+      `.settings-item[data-section="${section}"] .settings-item-label`
+    );
+
+    if (labelEl) {
+      labelEl.textContent = label;
+    }
+  });
+
+  if (backBtn) {
+    backBtn.title = t('common.back');
+    backBtn.setAttribute('aria-label', t('common.back'));
+  }
+
+  updateFullscreenButton();
 }
 
 /**
@@ -203,12 +261,12 @@ function escapeHtml(value) {
 }
 
 function showConfirmDialog({
-  title = '確認',
+  title = t('common.confirm'),
   message = '',
   detail = '',
   note = '',
-  confirmText = '確認',
-  cancelText = '取消',
+  confirmText = t('common.confirm'),
+  cancelText = t('common.cancel'),
 } = {}) {
   return new Promise((resolve) => {
     const backdrop = document.createElement('div');
@@ -224,9 +282,9 @@ function showConfirmDialog({
 
       <div class="settings-dialog-control-row">
         ${detail
-          ? `<div class="settings-dialog-detail">${escapeHtml(detail)}</div>`
-          : '<div class="settings-dialog-detail-spacer"></div>'
-        }
+        ? `<div class="settings-dialog-detail">${escapeHtml(detail)}</div>`
+        : '<div class="settings-dialog-detail-spacer"></div>'
+      }
 
         <button
           class="settings-dialog-button settings-dialog-cancel"
@@ -533,75 +591,79 @@ function renderLibrarySection() {
     : 'none';
 
   settingsContent.innerHTML = `
-    <h1 class="settings-section-title">書庫</h1>
+    <h1 class="settings-section-title">${t('settings.titleLibrary')}</h1>
 
     <div class="settings-group">
-      <div class="settings-label">書庫資料夾</div>
+      <div class="settings-label">${t('settings.libraryFolder')}</div>
       <div class="settings-block">
-        <button id="pick-folder-btn" class="settings-control" type="button">選取書庫資料夾</button>
+        <button id="pick-folder-btn" class="settings-control" type="button">
+          ${t('settings.pickLibraryFolder')}
+        </button>
       </div>
-      <div class="settings-hint">從本機選擇欲瀏覽的資料夾並匯入</div>
+      <div class="settings-hint">${t('settings.libraryFolderHint')}</div>
     </div>
 
     <div class="settings-group">
-      <div class="settings-label">書庫名稱</div>
+      <div class="settings-label">${t('settings.libraryName')}</div>
       <div class="settings-block">
         <input
           id="display-library-name-input"
           class="settings-input settings-control"
           type="text"
           maxlength="120"
-          placeholder="輸入書庫名稱"
-          value="${settings.displayLibraryName || ''}"
+          placeholder="${t('settings.libraryNamePlaceholder')}"
+          value="${escapeHtml(settings.displayLibraryName || '')}"
         >
       </div>
       <div class="settings-hint" id="display-library-name-hint">
-        自訂書庫名稱，於書庫左上角顯示：${getDisplayLibraryName()}
+        ${t('settings.libraryNameHint', { name: getDisplayLibraryName() })}
       </div>
     </div>
 
     <div class="settings-group">
-      <div class="settings-label">書庫路徑</div>
+      <div class="settings-label">${t('settings.libraryPath')}</div>
       <div class="settings-block">
-        <div class="settings-value settings-control">${currentLibraryPath || '尚未選擇書庫資料夾'}</div>
+        <div class="settings-value settings-control">
+        ${escapeHtml(currentLibraryPath || t('settings.noLibraryFolder'))}
+        </div>
       </div>
       <div class="settings-hint">
-        未輸入書庫名稱時，於書庫左上角顯示路徑
+        ${t('settings.libraryPathHint')}
       </div>
     </div>
 
     <div class="settings-group">
-      <div class="settings-label">書籍排序</div>
+      <div class="settings-label">${t('settings.bookSort')}</div>
       <div class="settings-check-list" id="book-sort-options">
         <button class="settings-check-option" data-sort-mode="none" type="button">
           <span class="settings-checkbox ${currentSortMode === 'none' ? 'checked' : ''}">
             ${currentSortMode === 'none' ? '✓' : ''}
           </span>
-          <span>無特定排序</span>
+          <span>${t('settings.sortNone')}</span>
         </button>
 
         <button class="settings-check-option" data-sort-mode="favorite" type="button">
           <span class="settings-checkbox ${currentSortMode === 'favorite' ? 'checked' : ''}">
             ${currentSortMode === 'favorite' ? '✓' : ''}
           </span>
-          <span>" 我的最愛 " 書籍優先</span>
+          <span>${t('settings.sortFavorite')}</span>
         </button>
 
         <button class="settings-check-option" data-sort-mode="unread" type="button">
           <span class="settings-checkbox ${currentSortMode === 'unread' ? 'checked' : ''}">
             ${currentSortMode === 'unread' ? '✓' : ''}
           </span>
-          <span>未閱讀的書籍優先</span>
+          <span>${t('settings.sortUnread')}</span>
         </button>
 
         <button class="settings-check-option" data-sort-mode="completedLast" type="button">
           <span class="settings-checkbox ${currentSortMode === 'completedLast' ? 'checked' : ''}">
             ${currentSortMode === 'completedLast' ? '✓' : ''}
           </span>
-          <span>已看完的書籍墊後</span>
+          <span>${t('settings.sortCompletedLast')}</span>
         </button>
       </div>
-      <div class="settings-hint">選擇一般書籍與特定書籍的排序方式</div>
+      <div class="settings-hint">${t('settings.bookSortHint')}</div>
     </div>
   `;
 
@@ -622,7 +684,9 @@ function renderLibrarySection() {
     settings.displayLibraryName = event.target.value;
 
     if (hint) {
-      hint.textContent = `目前書庫左上角顯示：${getDisplayLibraryName()}`;
+      hint.textContent = t('settings.currentLibraryNameHint', {
+        name: getDisplayLibraryName(),
+      });
     }
   });
 
@@ -683,10 +747,10 @@ function renderAppearanceSection() {
   `;
 
   settingsContent.innerHTML = `
-    <h1 class="settings-section-title">個人化</h1>
+    <h1 class="settings-section-title">${t('settings.titleAppearance')}</h1>
 
     <div class="settings-group">
-      <div class="settings-label">個人主題</div>
+      <div class="settings-label">${t('settings.personalTheme')}</div>
 
       <div class="appearance-row">
         <div class="appearance-row-controls appearance-row-controls-classic">
@@ -710,9 +774,9 @@ function renderAppearanceSection() {
       </div>
 
       <div class="appearance-row">
-        <div class="appearance-row-label">自訂顏色</div>
+        <div class="appearance-row-label">${t('settings.customColor')}</div>
         <div class="appearance-row-controls appearance-row-controls-fixed">
-          <label class="appearance-picker-trigger" for="appearance-color-picker" title="選擇自訂顏色">
+          <label class="appearance-picker-trigger" for="appearance-color-picker" title="${t('settings.chooseCustomColor')}">
             <span class="appearance-picker-icon">${PALETTE_ICON}</span>
           </label>
 
@@ -722,7 +786,7 @@ function renderAppearanceSection() {
               type="button"
               data-custom-history-index="${index}"
               ${color ? `style="background:${color}; color:${getAppearanceButtonTextColor(color)}; border-color:${color};"` : ''}
-              title="${color || '尚未儲存顏色'}">
+              title="${color || t('settings.noCustomColor')}">
             </button>
           `).join('')}
 
@@ -731,7 +795,7 @@ function renderAppearanceSection() {
             class="appearance-save-btn"
             type="button"
             style="background:${savedButtonColor}; color:${getAppearanceButtonTextColor(savedButtonColor)};">
-            保存
+            ${t('common.save')}
           </button>
 
           <input
@@ -744,7 +808,7 @@ function renderAppearanceSection() {
       </div>
 
       <div class="appearance-row">
-        <div class="appearance-row-label">保存顏色</div>
+        <div class="appearance-row-label">${t('settings.savedColor')}</div>
         <div class="appearance-row-controls appearance-row-controls-fixed">
           ${savedSlots.map((color, index) => `
             <button
@@ -752,7 +816,7 @@ function renderAppearanceSection() {
               type="button"
               data-saved-history-index="${index}"
               ${color ? `style="background:${color}; color:${getAppearanceButtonTextColor(color)}; border-color:${color};"` : ''}
-              title="${color || '尚未保存顏色'}">
+              title="${color || t('settings.noSavedColor')}">
             </button>
           `).join('')}
 
@@ -761,82 +825,86 @@ function renderAppearanceSection() {
             class="appearance-apply-btn"
             type="button"
             style="background:${appliedAccentColor}; color:${getAppearanceButtonTextColor(appliedAccentColor)};">
-            確認
+            ${t('common.confirm')}
           </button>
         </div>
       </div>
 
       <div class="settings-hint">
-        選擇個人主題顏色，可以自訂與保存顏色，須按下 " 確認 " 才會生效
+        ${t('settings.appearanceHint')}
       </div>
     </div>
     
     <div class="settings-group">
-  <div class="settings-label">書卡樣式</div>
+  <div class="settings-label">${t('settings.bookCardStyle')}</div>
 
   <div class="settings-check-list" id="book-card-options">
     <button class="settings-check-option" data-book-card-option="normal" type="button">
       <span class="settings-checkbox ${isDefaultBookCardStyle ? 'checked' : ''}">
         ${isDefaultBookCardStyle ? '✓' : ''}
       </span>
-      <span>含書名 / 圓角</span>
+      <span>${t('settings.bookCardNormal')}</span>
     </button>
 
     <button class="settings-check-option" data-book-card-option="coverOnly" type="button">
       <span class="settings-checkbox ${bookCardCoverOnly ? 'checked' : ''}">
         ${bookCardCoverOnly ? '✓' : ''}
       </span>
-      <span>無書名</span>
+      <span>${t('settings.bookCardCoverOnly')}</span>
     </button>
 
     <button class="settings-check-option" data-book-card-option="squareCorner" type="button">
       <span class="settings-checkbox ${bookCardSquareCorner ? 'checked' : ''}">
         ${bookCardSquareCorner ? '✓' : ''}
       </span>
-      <span>直角</span>
+      <span>${t('settings.bookCardSquareCorner')}</span>
     </button>
   </div>
 
   <div class="settings-hint">
-    選擇書卡的樣式
+    ${t('settings.bookCardHint')}
   </div>
 </div>
 
     <div class="settings-group">
-      <div class="settings-label">背景</div>
+      <div class="settings-label">${t('settings.background')}</div>
 
       <div class="settings-check-list" id="background-mode-options">
         <button class="settings-check-option" data-background-mode="none" type="button">
           <span class="settings-checkbox ${settings.backgroundMode === 'none' ? 'checked' : ''}">
             ${settings.backgroundMode === 'none' ? '✓' : ''}
           </span>
-          <span>不顯示</span>
+          <span>${t('settings.backgroundNone')}</span>
         </button>
 
         <button class="settings-check-option" data-background-mode="selectedBookCover" type="button">
           <span class="settings-checkbox ${settings.backgroundMode === 'selectedBookCover' ? 'checked' : ''}">
             ${settings.backgroundMode === 'selectedBookCover' ? '✓' : ''}
           </span>
-          <span>顯示點選的書籍封面</span>
+          <span>${t('settings.backgroundSelectedBookCover')}</span>
         </button>
 
         <button class="settings-check-option" data-background-mode="importedImage" type="button">
           <span class="settings-checkbox ${settings.backgroundMode === 'importedImage' ? 'checked' : ''}">
             ${settings.backgroundMode === 'importedImage' ? '✓' : ''}
           </span>
-          <span>顯示本機匯入的圖片</span>
+          <span>${t('settings.backgroundImportedImage')}</span>
         </button>
       </div>
 
       <div class="background-image-picker-block">
-        <button id="pick-background-image-btn" class="settings-control" type="button">選取背景圖片</button>
+        <button id="pick-background-image-btn" class="settings-control" type="button">
+        ${t('settings.pickBackgroundImage')}
+        </button>
         <div class="settings-hint background-image-path">
-          目前匯入圖片：${settings.backgroundImagePath ? settings.backgroundImagePath : '尚未選取背景圖片'}
+          ${t('settings.backgroundImagePath', {
+    path: settings.backgroundImagePath || t('settings.backgroundImageNotSelected'),
+  })}
         </div>
       </div>
 
       <div class="background-slider-row">
-        <div class="background-slider-label">透明度</div>
+        <div class="background-slider-label">${t('settings.opacity')}</div>
         <div class="background-range-wrap">
           <input
           id="background-opacity-range"
@@ -854,7 +922,7 @@ function renderAppearanceSection() {
       </div>
 
       <div class="background-slider-row">
-        <div class="background-slider-label">模糊度</div>
+        <div class="background-slider-label">${t('settings.blur')}</div>
         <div class="background-range-wrap">
           <input
           id="background-blur-range"
@@ -1088,19 +1156,19 @@ function renderHistorySection() {
     .filter((path) => path && path !== currentLibraryPath)
     .slice(0, 3);
 
-  const historyPath1 = visibleHistoryPaths[0] || '目前沒有紀錄';
-  const historyPath2 = visibleHistoryPaths[1] || '目前沒有紀錄';
-  const historyPath3 = visibleHistoryPaths[2] || '目前沒有紀錄';
+  const historyPath1 = visibleHistoryPaths[0] || t('settings.noRecord');
+  const historyPath2 = visibleHistoryPaths[1] || t('settings.noRecord');
+  const historyPath3 = visibleHistoryPaths[2] || t('settings.noRecord');
 
   const canOpenHistoryFolder = Boolean(pendingHistoryLibraryPath);
   const canClearHistoryLibraryMeta = Boolean(pendingHistoryLibraryPath);
   const canClearReadingProgress = Boolean(clearReadingProgressChecked);
 
   settingsContent.innerHTML = `
-    <h1 class="settings-section-title">紀錄</h1>
+    <h1 class="settings-section-title">${t('settings.titleHistory')}</h1>
 
     <div class="settings-group">
-      <div class="settings-label">歷史書庫</div>
+      <div class="settings-label">${t('settings.historyLibrary')}</div>
 
       <div class="settings-block">
   <button
@@ -1141,46 +1209,46 @@ function renderHistorySection() {
           class="settings-action-button settings-control"
           type="button"
           ${canOpenHistoryFolder ? '' : 'disabled'}>
-          開啟歷史書庫資料夾
+          ${t('settings.openHistoryLibraryFolder')}
         </button>
       </div>
       
       <div class="settings-block">
-  <button
-    id="clear-history-library-meta-btn"
-    class="settings-action-button settings-control danger-button"
-    type="button"
-    ${canClearHistoryLibraryMeta ? '' : 'disabled'}>
-    清除歷史書庫資料夾
-  </button>
-</div>
+        <button
+        id="clear-history-library-meta-btn"
+        class="settings-action-button settings-control danger-button"
+        type="button"
+        ${canClearHistoryLibraryMeta ? '' : 'disabled'}>
+        ${t('settings.clearHistoryLibraryFolder')}
+        </button>
+      </div>
 
-      <div class="settings-hint">確認選擇其中一個歷史書庫後，按下按鈕開啟或清除</div>
+      <div class="settings-hint">${t('settings.historyLibraryHint')}</div>
     </div>
 
     <div class="settings-group">
-      <div class="settings-label">最近閱讀</div>
+      <div class="settings-label">${t('settings.recentReading')}</div>
 
       <div class="settings-check-list" id="reading-history-visibility-options">
         <button class="settings-check-option" data-history-visibility="hidden" type="button">
           <span class="settings-checkbox ${currentVisibility === 'hidden' ? 'checked' : ''}">
             ${currentVisibility === 'hidden' ? '✓' : ''}
           </span>
-          <span>不顯示</span>
+          <span>${t('settings.readingHistoryHidden')}</span>
         </button>
 
         <button class="settings-check-option" data-history-visibility="shown" type="button">
           <span class="settings-checkbox ${currentVisibility === 'shown' ? 'checked' : ''}">
             ${currentVisibility === 'shown' ? '✓' : ''}
           </span>
-          <span>顯示</span>
+          <span>${t('settings.readingHistoryShown')}</span>
         </button>
       </div>
-      <div class="settings-hint">選擇是否顯示最近閱讀介面</div>
+      <div class="settings-hint">${t('settings.readingHistoryHint')}</div>
     </div>
 
     <div class="settings-group">
-      <div class="settings-label">閱讀進度</div>
+      <div class="settings-label">${t('settings.readingProgress')}</div>
 
       <button
         id="clear-reading-progress-check"
@@ -1189,7 +1257,7 @@ function renderHistorySection() {
         <span class="settings-checkbox ${clearReadingProgressChecked ? 'checked' : ''}">
           ${clearReadingProgressChecked ? '✓' : ''}
         </span>
-        <span>清除所有的閱讀進度</span>
+        <span>${t('settings.clearAllReadingProgress')}</span>
       </button>
 
       <div class="settings-block">
@@ -1198,10 +1266,12 @@ function renderHistorySection() {
           class="settings-action-button settings-control danger-button"
           type="button"
           ${canClearReadingProgress ? '' : 'disabled'}>
-          確認清除所有閱讀進度
+          ${t('settings.confirmClearAllReadingProgress')}
         </button>
       </div>
-      <div class="settings-hint">確認清除後，所有書籍回到進度 " 未開始 " 狀態，重新紀錄</div>
+      <div class="settings-hint">
+      ${t('settings.clearReadingProgressHint')}
+      </div>
     </div>
   `;
 
@@ -1251,12 +1321,12 @@ function renderHistorySection() {
     if (!pendingHistoryLibraryPath) return;
 
     const confirmed = await showConfirmDialog({
-      title: '清除歷史書庫',
-      message: '確認要清除這個書庫嗎？',
+      title: t('settings.clearHistoryLibrary'),
+      message: t('settings.clearHistoryLibraryMessage'),
       detail: pendingHistoryLibraryPath,
-      note: '這只會刪除在該書庫建立的 .myreader 資料夾，不會刪除 PDF / CBZ 書籍檔案。',
-      confirmText: '確認',
-      cancelText: '取消',
+      note: t('settings.clearHistoryLibraryNote'),
+      confirmText: t('common.confirm'),
+      cancelText: t('common.cancel'),
     });
 
     if (!confirmed) return;
@@ -1307,34 +1377,34 @@ function renderAutoplaySection() {
   const BOOKMARK_ICON = `<svg class="command-icon bookmark-command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M200-120v-640q0-33 23.5-56.5T280-840h400q33 0 56.5 23.5T760-760v640L480-240 200-120Z"/></svg>`;
 
   settingsContent.innerHTML = `
-    <h1 class="settings-section-title">閱讀功能細項</h1>
+    <h1 class="settings-section-title">${t('settings.titleReading')}</h1>
 
     <div class="settings-group">
-      <div class="settings-label">閱讀模式</div>
+      <div class="settings-label">${t('settings.readingMode')}</div>
 
       <div class="settings-check-list" id="content-reading-mode-options">
         <button class="settings-check-option" data-content-reading-mode="document" type="button">
           <span class="settings-checkbox ${currentContentReadingMode === 'document' ? 'checked' : ''}">
             ${currentContentReadingMode === 'document' ? '✓' : ''}
           </span>
-          <span>文件模式</span>
+          <span>${t('settings.documentMode')}</span>
         </button>
 
         <button class="settings-check-option" data-content-reading-mode="comic" type="button">
           <span class="settings-checkbox ${currentContentReadingMode === 'comic' ? 'checked' : ''}">
             ${currentContentReadingMode === 'comic' ? '✓' : ''}
           </span>
-          <span>漫畫模式</span>
+          <span>${t('settings.comicMode')}</span>
         </button>
       </div>
 
       <div class="settings-hint">
-        文件模式下可選取 PDF 的文字；漫畫模式僅顯示頁面，無法選取文字
+        ${t('settings.readingModeHint')}
       </div>
     </div>
 
     <div class="settings-group">
-      <div class="settings-label">換頁指令</div>
+      <div class="settings-label">${t('settings.turnPageCommand')}</div>
 
       <div class="settings-check-list command-option-list" id="turn-page-command-options">
         <button class="settings-check-option command-option" data-turn-command="none" type="button">
@@ -1349,7 +1419,7 @@ function renderAutoplaySection() {
       : ''
     }
           </span>
-          <span>無額外指令</span>
+          <span>${t('settings.noExtraCommand')}</span>
         </button>
 
         <button
@@ -1369,9 +1439,9 @@ function renderAutoplaySection() {
     }
           </span>
           ${CLICK_NEXT_ICON}
-          <span>下一頁 / 向下捲動</span>
+          <span>${t('settings.nextPageScrollDown')}</span>
           ${CLICK_PREV_ICON}
-          <span>上一頁 / 向上捲動</span>
+          <span>${t('settings.prevPageScrollUp')}</span>
         </button>
 
         <button class="settings-check-option command-option" data-turn-command="leftNextRightPrev" type="button">
@@ -1380,9 +1450,9 @@ function renderAutoplaySection() {
             ${settings.pageClickCommand.includes('leftNextRightPrev') ? '✓' : ''}
           </span>
           ${LEFT_ICON}
-          <span>下一頁</span>
+          <span>${t('settings.nextPage')}</span>
           ${RIGHT_ICON}
-          <span>上一頁</span>
+          <span>${t('settings.prevPage')}</span>
         </button>
 
         <button class="settings-check-option command-option" data-turn-command="leftPrevRightNext" type="button">
@@ -1391,9 +1461,9 @@ function renderAutoplaySection() {
             ${settings.pageClickCommand.includes('leftPrevRightNext') ? '✓' : ''}
           </span>
           ${LEFT_ICON}
-          <span>上一頁</span>
+          <span>${t('settings.prevPage')}</span>
           ${RIGHT_ICON}
-          <span>下一頁</span>
+          <span>${t('settings.nextPage')}</span>
         </button>
 
         <button class="settings-check-option command-option" data-turn-command="upPrevDownNext" type="button">
@@ -1409,17 +1479,17 @@ function renderAutoplaySection() {
     }
           </span>
           ${UP_ICON}
-          <span>上一頁 / 向上捲動</span>
+          <span>${t('settings.prevPageScrollUp')}</span>
           ${DOWN_ICON}
-          <span>下一頁 / 向下捲動</span>
+          <span>${t('settings.nextPageScrollDown')}</span>
         </button>
       </div>
 
-      <div class="settings-hint">滑鼠左 / 右鍵換頁與捲動在文件模式下無法使用</div>
+      <div class="settings-hint">${t('settings.turnPageCommandHint')}</div>
     </div>
 
     <div class="settings-group">
-      <div class="settings-label">書籤跳轉</div>
+      <div class="settings-label">${t('settings.bookmarkJump')}</div>
 
       <div class="settings-check-list command-option-list" id="bookmark-command-options">
         <button class="settings-check-option command-option" data-bookmark-command="leftNextRightPrev" type="button">
@@ -1427,9 +1497,9 @@ function renderAutoplaySection() {
             ${settings.bookmarkCommand !== 'leftPrevRightNext' ? '✓' : ''}
           </span>
           <span class="bookmark-command-left">${BOOKMARK_ICON}</span>
-          <span>下一書籤</span>
+          <span>${t('settings.nextBookmark')}</span>
           <span class="bookmark-command-right">${BOOKMARK_ICON}</span>
-          <span>上一書籤</span>
+          <span>${t('settings.prevBookmark')}</span>
         </button>
 
         <button class="settings-check-option command-option" data-bookmark-command="leftPrevRightNext" type="button">
@@ -1437,16 +1507,16 @@ function renderAutoplaySection() {
             ${settings.bookmarkCommand === 'leftPrevRightNext' ? '✓' : ''}
           </span>
           <span class="bookmark-command-left">${BOOKMARK_ICON}</span>
-          <span>上一書籤</span>
+          <span>${t('settings.prevBookmark')}</span>
           <span class="bookmark-command-right">${BOOKMARK_ICON}</span>
-          <span>下一書籤</span>
+          <span>${t('settings.nextBookmark')}</span>
         </button>
       </div>
-      <div class="settings-hint">選擇跳轉書籤的方向</div>
+      <div class="settings-hint">${t('settings.bookmarkJumpHint')}</div>
     </div>
 
     <div class="settings-group">
-      <div class="settings-label">循環播放間隔</div>
+      <div class="settings-label">${t('settings.autoplayInterval')}</div>
       <div class="settings-row">
         <input
           id="autoplay-seconds-input"
@@ -1456,9 +1526,9 @@ function renderAutoplaySection() {
           step="1"
           value="${settings.autoPlaySeconds}"
         >
-        <span class="settings-unit">秒</span>
+        <span class="settings-unit">${t('common.seconds')}</span>
       </div>
-      <div class="settings-hint">設定循環播放，切換至下一頁的間隔秒數</div>
+      <div class="settings-hint">${t('settings.autoplayIntervalHint')}</div>
     </div>
   `;
 
@@ -1581,13 +1651,13 @@ function renderAutoplaySection() {
  */
 function renderSystemSection() {
   const effectiveTheme = getEffectiveAppearanceTheme();
-  const currentLanguage = normalizeLanguage(settings.language);
+  const currentLanguage = getSystemPreviewLanguage();
 
   settingsContent.innerHTML = `
-    <h1 class="settings-section-title">系統</h1>
+    <h1 class="settings-section-title">${t('settings.titleSystem')}</h1>
 
     <div class="settings-group">
-      <div class="settings-label">系統主題</div>
+      <div class="settings-label">${t('settings.systemTheme')}</div>
 
       <div class="appearance-theme-grid">
         <button
@@ -1595,7 +1665,7 @@ function renderSystemSection() {
           id="system-theme-light-btn"
           type="button">
           <span class="appearance-theme-preview appearance-light-preview">A</span>
-          <span>淺色調</span>
+          <span>${t('settings.lightTheme')}</span>
         </button>
 
         <button
@@ -1603,15 +1673,15 @@ function renderSystemSection() {
           id="system-theme-dark-btn"
           type="button">
           <span class="appearance-theme-preview appearance-dark-preview">A</span>
-          <span>深色調</span>
+          <span>${t('settings.darkTheme')}</span>
         </button>
       </div>
 
-      <div class="settings-hint">選擇系統的主題色調</div>
+      <div class="settings-hint">${t('settings.systemThemeHint')}</div>
     </div>
 
     <div class="settings-group">
-      <div class="settings-label">偏好語言</div>
+      <div class="settings-label">${t('settings.preferredLanguage')}</div>
 
       <div class="system-language-row">
         <select id="preferred-language-select" class="settings-input settings-select">
@@ -1621,18 +1691,18 @@ function renderSystemSection() {
         </select>
 
         <button id="preferred-language-apply-btn" class="settings-action-button system-apply-button" type="button">
-          確認
+          ${t('common.confirm')}
         </button>
       </div>
 
-      <div class="settings-hint">選擇偏好的語言，須按下 " 確認 " 才會生效</div>
+      <div class="settings-hint">${t('settings.preferredLanguageHint')}</div>
     </div>
 
     <div class="settings-group">
-      <div class="settings-label">軟體資訊</div>
-      <p class="settings-hint">名稱：AirWei Reader</p>
-      <p class="settings-hint">作者：Youwei, Taiwan</p>
-      <p class="settings-hint">內容：AirWei Reader 是一款本機 PDF / CBZ 閱讀器，支援書庫管理</p>
+      <div class="settings-label">${t('settings.softwareInfo')}</div>
+      <p class="settings-hint">${t('settings.softwareName')}</p>
+      <p class="settings-hint">${t('settings.softwareAuthor')}</p>
+      <p class="settings-hint">${t('settings.softwareDescription')}</p>
     </div>
   `;
 
@@ -1643,6 +1713,17 @@ function renderSystemSection() {
  * 綁定「系統」區塊事件
  */
 function bindSystemSectionEvents() {
+  const languageSelect = document.getElementById('preferred-language-select');
+
+  languageSelect?.addEventListener('change', (event) => {
+    const nextLanguage = normalizeLanguage(event.target.value);
+
+    systemLanguageDraft = nextLanguage;
+    i18n = createI18n(nextLanguage);
+    applyDocumentLanguage(nextLanguage);
+
+    renderSystemSection();
+  });
   document.getElementById('system-theme-light-btn')?.addEventListener('click', async () => {
     settings.appearanceTheme = 'light';
     settings = await window.readerAPI.saveAppSettings(settings);
@@ -1661,13 +1742,18 @@ function bindSystemSectionEvents() {
 
   document.getElementById('preferred-language-apply-btn')?.addEventListener('click', async () => {
     const select = document.getElementById('preferred-language-select');
-    const nextLanguage = normalizeLanguage(select?.value);
+    const nextLanguage = normalizeLanguage(systemLanguageDraft || select?.value);
 
     settings.language = nextLanguage;
-    document.documentElement.lang = nextLanguage === 'zh-TW' ? 'zh-Hant' : nextLanguage;
+    systemLanguageDraft = '';
+
+    i18n = createI18n(nextLanguage);
+    applyDocumentLanguage(nextLanguage);
+
     settings = await window.readerAPI.saveAppSettings(settings);
 
-    renderSystemSection();
+    updateSettingsStaticText();
+    renderSection();
   });
 }
 
@@ -1675,6 +1761,7 @@ function bindSystemSectionEvents() {
  * 依目前選單渲染右側內容
  */
 function renderSection() {
+  updateSettingsStaticText();
   renderMenuState();
 
   if (activeSection === 'library') {
@@ -1774,6 +1861,8 @@ async function loadInitialState() {
 
   appearanceCustomHistory = [...settings.customColorHistory];
   appearanceSavedColorHistory = [...settings.savedColorHistory];
+  i18n = createI18n(settings.language);
+  applyDocumentLanguage(settings.language);
 }
 
 // ===== 全螢幕工具 =====
@@ -1794,7 +1883,9 @@ async function leaveFullscreenIfNeeded(event) {
 function updateFullscreenButton() {
   if (!fullscreenBtn) return;
 
-  const label = isFullscreen ? '離開全螢幕' : '進入全螢幕';
+  const label = isFullscreen
+    ? t('common.fullscreenExit')
+    : t('common.fullscreenEnter');
   fullscreenBtn.title = label;
   fullscreenBtn.setAttribute('aria-label', label);
 
@@ -1823,6 +1914,10 @@ backBtn?.addEventListener('click', async () => {
     resetHistoryDraftState();
   }
 
+  if (activeSection === 'system') {
+    cancelSystemLanguagePreview();
+  }
+
   await window.readerAPI.openLibraryPage();
 });
 
@@ -1845,6 +1940,10 @@ settingsMenu?.addEventListener('click', (event) => {
     resetHistoryDraftState();
   }
 
+  if (activeSection === 'system' && nextSection !== 'system') {
+    cancelSystemLanguagePreview();
+  }
+
   activeSection = nextSection;
   renderSection();
 });
@@ -1856,14 +1955,18 @@ window.addEventListener('keydown', leaveFullscreenIfNeeded);
  * 初始化設定頁
  */
 async function initSettingsPage() {
-  await loadInitialState();
-  resetAppearanceDraftState();
-  applySavedTheme();
-  await applySettingsPageBackground();
+  try {
+    await loadInitialState();
+    resetAppearanceDraftState();
+    applySavedTheme();
+    await applySettingsPageBackground();
 
-  activeSection = 'library';
-  updateFullscreenButton();
-  renderSection();
+    activeSection = 'library';
+    updateFullscreenButton();
+    renderSection();
+  } finally {
+    finishBooting();
+  }
 }
 
 initSettingsPage();

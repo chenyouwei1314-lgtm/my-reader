@@ -109,6 +109,12 @@ let activeCoverJobs = 0;
 const MAX_CONCURRENT_COVER_JOBS = 2;
 
 // ===== 基本工具函式 =====
+function finishBooting() {
+  requestAnimationFrame(() => {
+    document.documentElement.classList.remove('booting');
+  });
+}
+
 function getBookById(bookId) {
   return books.find((book) => book.id === bookId);
 }
@@ -2033,16 +2039,24 @@ window.addEventListener('resize', () => {
 
 // ===== 初始化 =====
 async function initApp() {
-  await loadAppSettings();
-  await showInitialLanguageDialogIfNeeded();
-  updateStaticUiText();
-  updateFullscreenButton();
-  updateBookSearchIcon();
-  renderLibraryTitle();
-  await restoreLastLibrary();
-  await applyPageBackground();
-  setupRecentBookCardWidthSync();
-  applyRecentBookCardWidth();
+  try {
+    await loadAppSettings();
+
+    await showInitialLanguageDialogIfNeeded();
+
+    updateStaticUiText();
+    updateFullscreenButton();
+    updateBookSearchIcon();
+    renderLibraryTitle();
+
+    await restoreLastLibrary();
+    await applyPageBackground();
+
+    setupRecentBookCardWidthSync();
+    applyRecentBookCardWidth();
+  } finally {
+    finishBooting();
+  }
 }
 
 initApp();
