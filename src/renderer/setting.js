@@ -41,6 +41,7 @@ applySettingTheme(
 
 // ===== DOM 元素 =====
 const backBtn = document.getElementById('back-btn');
+const backBtnLabel = backBtn?.querySelector('.toolbar-btn-label');
 const fullscreenBtn = document.getElementById('fullscreen-btn');
 const settingsMenu = document.getElementById('settings-menu');
 const settingsContent = document.getElementById('settings-content');
@@ -172,8 +173,14 @@ function updateSettingsStaticText() {
   });
 
   if (backBtn) {
-    backBtn.title = t('common.back');
-    backBtn.setAttribute('aria-label', t('common.back'));
+    const label = t('reader.backToLibrary');
+
+    backBtn.title = label;
+    backBtn.setAttribute('aria-label', label);
+  }
+
+  if (backBtnLabel) {
+    backBtnLabel.textContent = t('common.back');
   }
 
   updateFullscreenButton();
