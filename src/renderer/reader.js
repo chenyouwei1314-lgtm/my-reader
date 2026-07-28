@@ -539,9 +539,12 @@ function updateFavoriteButton() {
   const favorite = isFavoriteBook();
   favoriteBtn.classList.toggle('active', favorite);
 
-  const label = favorite
+  const baseLabel = favorite
     ? i18n.t('reader.removeFavorite')
     : i18n.t('reader.addFavorite');
+
+  const label = `${baseLabel} (Shift + F)`;
+
   favoriteBtn.title = label;
   favoriteBtn.setAttribute('aria-label', label);
 
@@ -642,9 +645,11 @@ function updateBookmarkButton() {
   const bookmarked = isCurrentPageBookmarked();
 
   bookmarkBtn.classList.toggle('active', bookmarked);
-  const label = bookmarked
+  const baseLabel = bookmarked
     ? i18n.t('reader.removeBookmark')
     : i18n.t('reader.addBookmark');
+
+  const label = `${baseLabel} (B)`;
 
   bookmarkBtn.title = label;
   bookmarkBtn.setAttribute('aria-label', label);
@@ -804,11 +809,14 @@ function updateBookmarkNavTitles() {
     ? i18n.t('reader.prevBookmark')
     : i18n.t('reader.nextBookmark');
 
-  prevBookmarkBtn.title = prevLabel;
-  prevBookmarkBtn.setAttribute('aria-label', prevLabel);
+  const leftTitle = `${prevLabel} ( [ )`;
+  const rightTitle = `${nextLabel} ( ] )`;
 
-  nextBookmarkBtn.title = nextLabel;
-  nextBookmarkBtn.setAttribute('aria-label', nextLabel);
+  prevBookmarkBtn.title = leftTitle;
+  prevBookmarkBtn.setAttribute('aria-label', leftTitle);
+
+  nextBookmarkBtn.title = rightTitle;
+  nextBookmarkBtn.setAttribute('aria-label', rightTitle);
 }
 
 function setupBookmarkUi() {
@@ -827,9 +835,11 @@ function updateModeButtons() {
   const isPaged = readerMode === 'paged';
 
   modeToggleBtn.classList.toggle('active', !isPaged);
-  const label = isPaged
+  const baseLabel = isPaged
     ? i18n.t('reader.pagedMode')
     : i18n.t('reader.scrollMode');
+
+  const label = `${baseLabel} (M)`;
 
   modeToggleBtn.title = label;
   modeToggleBtn.setAttribute('aria-label', label);
@@ -860,11 +870,13 @@ function updateFitButtons() {
     !isFitHeight && !isFitWidth
   );
 
-  const label = isFitHeight
+  const baseLabel = isFitHeight
     ? i18n.t('reader.fitHeight')
     : isFitWidth
       ? i18n.t('reader.fitWidth')
       : i18n.t('reader.customZoom');
+
+  const label = `${baseLabel} (F)`;
 
   fitToggleBtn.title = label;
   fitToggleBtn.setAttribute('aria-label', label);
@@ -905,8 +917,11 @@ function updateZoomButtons() {
   zoomOutBtn.disabled =
     endpointDirection > 0 ? atHeight : atWidth;
 
-  const zoomInLabel = i18n.t('reader.zoomIn');
-  const zoomOutLabel = i18n.t('reader.zoomOut');
+  const zoomInLabel =
+    `${i18n.t('reader.zoomIn')} (Ctrl + +)`;
+
+  const zoomOutLabel =
+    `${i18n.t('reader.zoomOut')} (Ctrl + - )`;
 
   zoomInBtn.title = zoomInLabel;
   zoomInBtn.setAttribute('aria-label', zoomInLabel);
@@ -973,11 +988,13 @@ function updateAutoPlayButton() {
 
   autoplayBtn.disabled = !canPlay;
   autoplayBtn.classList.toggle('active', isAutoPlaying && canPlay);
-  const label = isAutoPlaying && canPlay
+  const baseLabel = isAutoPlaying && canPlay
     ? i18n.t('reader.pauseAutoplay')
     : i18n.t('reader.autoplayWithSeconds', {
       seconds: autoPlayIntervalMs / 1000,
     });
+
+  const label = `${baseLabel} (P)`;
 
   autoplayBtn.title = label;
   autoplayBtn.setAttribute('aria-label', label);
@@ -2248,6 +2265,33 @@ async function prevPage(options = {}) {
 // =========================================================
 // Mode / Fit 切換
 // =========================================================
+async function toggleFitMode() {
+  const isCustomZoom =
+    !isFitHeightZoom() &&
+    !isFitWidthZoom();
+
+  // 自訂縮放時，返回進入自訂縮放前的 Fit 狀態
+  if (isCustomZoom) {
+    await setPageFitMode(customZoomReturnFitMode);
+    return;
+  }
+
+  // 端點之間切換
+  const nextMode = isFitHeightZoom()
+    ? 'width'
+    : 'height';
+
+  await setPageFitMode(nextMode);
+}
+
+async function toggleReaderMode() {
+  const nextMode = readerMode === 'paged'
+    ? 'scroll'
+    : 'paged';
+
+  await setReaderMode(nextMode);
+}
+
 async function setReaderMode(nextMode, force = false) {
   if (!force && readerMode === nextMode) return;
   resetPagedFitWidthBoundaryGuard();
@@ -2761,22 +2805,7 @@ favoriteBtn?.addEventListener('click', async () => {
 });
 
 fitToggleBtn?.addEventListener('click', async () => {
-  const isCustomZoom =
-    !isFitHeightZoom() &&
-    !isFitWidthZoom();
-
-  // 自訂縮放時，回到進入自訂縮放前的 fit 狀態
-  if (isCustomZoom) {
-    await setPageFitMode(customZoomReturnFitMode);
-    return;
-  }
-
-  // 位於兩個端點時，維持原本的 height / width 切換
-  const nextMode = isFitHeightZoom()
-    ? 'width'
-    : 'height';
-
-  await setPageFitMode(nextMode);
+  await toggleFitMode();
 });
 
 zoomOutBtn?.addEventListener('click', async () => {
@@ -2790,8 +2819,7 @@ zoomInBtn?.addEventListener('click', async () => {
 });
 
 modeToggleBtn?.addEventListener('click', async () => {
-  const nextMode = readerMode === 'paged' ? 'scroll' : 'paged';
-  await setReaderMode(nextMode);
+  await toggleReaderMode();
 });
 
 autoplayBtn?.addEventListener('click', () => {
@@ -2850,14 +2878,21 @@ document.addEventListener('keydown', async (event) => {
   if (isPageIndicatorEditing) return;
 
   const activeElement = document.activeElement;
-  const isInteractiveElement =
+
+  const isTypingElement =
     activeElement instanceof HTMLInputElement ||
     activeElement instanceof HTMLTextAreaElement ||
     activeElement instanceof HTMLSelectElement ||
-    activeElement instanceof HTMLButtonElement ||
-    activeElement instanceof HTMLAnchorElement ||
     activeElement?.isContentEditable;
 
+  const isInteractiveElement =
+    isTypingElement ||
+    activeElement instanceof HTMLButtonElement ||
+    activeElement instanceof HTMLAnchorElement;
+
+  // =========================================================
+  // 全螢幕：Space
+  // =========================================================
   if (
     event.code === 'Space' &&
     !event.ctrlKey &&
@@ -2867,16 +2902,155 @@ document.addEventListener('keydown', async (event) => {
   ) {
     event.preventDefault();
 
-    // 避免按住空白鍵時不斷反覆切換
     if (event.repeat) return;
 
     await toggleFullscreen();
     return;
   }
 
+  // Esc 離開全螢幕
   if (event.key === 'Escape' && isFullscreen) {
     await toggleFullscreen();
     return;
+  }
+
+  // 輸入框正在使用時，不觸發其他閱讀快捷鍵
+  if (isTypingElement) return;
+
+  // =========================================================
+  // 縮放：Ctrl + / Ctrl -
+  // =========================================================
+  const hasZoomModifier =
+    (event.ctrlKey || event.metaKey) &&
+    !event.altKey;
+
+  if (
+    hasZoomModifier &&
+    event.code === 'Minus'
+  ) {
+    event.preventDefault();
+
+    if (event.repeat) return;
+    if (!totalPages) return;
+    if (zoomOutBtn?.disabled) return;
+
+    await changeZoom(-1);
+    return;
+  }
+
+  if (
+    hasZoomModifier &&
+    event.code === 'Equal'
+  ) {
+    event.preventDefault();
+
+    if (event.repeat) return;
+    if (!totalPages) return;
+    if (zoomInBtn?.disabled) return;
+
+    // 同時支援 Ctrl+= 與 Ctrl++
+    await changeZoom(1);
+    return;
+  }
+
+  // =========================================================
+  // 單鍵快捷鍵
+  // =========================================================
+  const hasNoPrimaryModifier =
+    !event.ctrlKey &&
+    !event.altKey &&
+    !event.metaKey;
+
+  if (hasNoPrimaryModifier && !event.repeat) {
+    // Shift + F：加入／移除我的最愛
+    if (
+      event.code === 'KeyF' &&
+      event.shiftKey
+    ) {
+      event.preventDefault();
+
+      await toggleFavorite();
+      return;
+    }
+
+    // F：切換 Fit；自訂縮放時返回上一次 Fit 狀態
+    if (
+      event.code === 'KeyF' &&
+      !event.shiftKey
+    ) {
+      event.preventDefault();
+
+      if (!totalPages) return;
+
+      await toggleFitMode();
+      return;
+    }
+
+    // B：加入／移除目前頁書籤
+    if (
+      event.code === 'KeyB' &&
+      !event.shiftKey
+    ) {
+      event.preventDefault();
+
+      if (!totalPages) return;
+
+      toggleCurrentPageBookmark();
+      return;
+    }
+
+    // [：執行左側書籤跳轉按鈕
+    if (
+      event.code === 'BracketLeft' &&
+      !event.shiftKey
+    ) {
+      event.preventDefault();
+
+      if (!totalPages) return;
+
+      await handleBookmarkNav('left');
+      return;
+    }
+
+    // ]：執行右側書籤跳轉按鈕
+    if (
+      event.code === 'BracketRight' &&
+      !event.shiftKey
+    ) {
+      event.preventDefault();
+
+      if (!totalPages) return;
+
+      await handleBookmarkNav('right');
+      return;
+    }
+
+    // M：切換分頁／捲動模式
+    if (
+      event.code === 'KeyM' &&
+      !event.shiftKey
+    ) {
+      event.preventDefault();
+
+      if (!totalPages) return;
+
+      await toggleReaderMode();
+      return;
+    }
+
+    // P：開始／暫停循環播放
+    if (
+      event.code === 'KeyP' &&
+      !event.shiftKey
+    ) {
+      event.preventDefault();
+
+      if (!totalPages) return;
+      if (!canUseAutoPlay() && !isAutoPlaying) return;
+
+      toggleAutoPlay();
+      return;
+    }
   }
 
   const isArrowOrPageKey =
