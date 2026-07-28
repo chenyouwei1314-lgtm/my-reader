@@ -28,10 +28,10 @@ const fitIconPath = document.getElementById('fit-icon-path');
 const fitIconSvg = document.getElementById('fit-icon-svg');
 const modeIconPath = document.getElementById('mode-icon-path');
 const autoplayIconPath = document.getElementById('autoplay-icon-path');
-const fullscreenIconPath = document.getElementById('fullscreen-icon-path');
 const favoriteBtn = document.getElementById('favorite-btn');
-const fullscreenBtn = document.getElementById('fullscreen-btn');
 const fitToggleBtn = document.getElementById('fit-toggle-btn');
+const zoomOutBtn = document.getElementById('zoom-out-btn');
+const zoomInBtn = document.getElementById('zoom-in-btn');
 const modeToggleBtn = document.getElementById('mode-toggle-btn');
 const autoplayBtn = document.getElementById('autoplay-btn');
 const pageIndicator = document.getElementById('page-indicator');
@@ -54,6 +54,10 @@ let currentFilePath = '';
 let readerMode = 'paged'; // 'paged' | 'scroll'
 let pageFitMode = 'height'; // 'height' | 'width'
 let contentReadingMode = 'document'; // 'document' | 'comic'
+let zoomProgress = 0;
+const ZOOM_STEP = 0.1;
+const ZOOM_EPSILON = 0.0001;
+let customZoomReturnFitMode = 'height';
 let pageClickCommand = [];
 let scrollHoldCommand = [];
 let holdScrollTimer = null;
@@ -104,12 +108,6 @@ let pageIndicatorDraftValue = '';
 
 let pointerDownInfo = null;
 let keyHoldTimer = null;
-
-const STRICT_DOUBLE_CLICK_MS = 220;
-const STRICT_DOUBLE_CLICK_DISTANCE = 8;
-
-let lastStrictClickInfo = null;
-let singleClickTimer = null;
 
 let bookmarkBtn = null;
 let bookmarkIconPath = null;
@@ -196,6 +194,77 @@ function getViewerSize() {
     width: Math.max(1, readerContainer.clientWidth),
     height: Math.max(1, readerContainer.clientHeight),
   };
+}
+
+function clampZoomProgress(value) {
+  return Math.min(1, Math.max(0, Number(value) || 0));
+}
+
+function isFitHeightZoom() {
+  return zoomProgress <= ZOOM_EPSILON;
+}
+
+function isFitWidthZoom() {
+  return zoomProgress >= 1 - ZOOM_EPSILON;
+}
+
+/**
+ * 自訂縮放時需要允許頁內捲動，因此採用 width 行為。
+ */
+function syncPageFitModeWithZoom() {
+  pageFitMode = isFitHeightZoom() ? 'height' : 'width';
+}
+
+/**
+ * 將「佔滿高度」與「佔滿寬度」之間做線性插值。
+ *
+ * zoomProgress = 0：fit height
+ * zoomProgress = 1：fit width
+ */
+function getInterpolatedViewerScale(contentWidth, contentHeight) {
+  const { width: viewerWidth, height: viewerHeight } = getViewerSize();
+
+  const safeWidth = Math.max(1, Number(contentWidth) || 1);
+  const safeHeight = Math.max(1, Number(contentHeight) || 1);
+
+  const fitHeightScale = viewerHeight / safeHeight;
+  const fitWidthScale = viewerWidth / safeWidth;
+
+  return (
+    fitHeightScale +
+    (fitWidthScale - fitHeightScale) * zoomProgress
+  );
+}
+
+/**
+ * 判斷目前頁面是 fit width 較大，還是 fit height 較大。
+ * 一般直式頁面會回傳 1；橫向頁面可能回傳 -1。
+ */
+function getZoomEndpointDirection() {
+  const wrapper = getPageWrapper(clampPage(currentPage));
+  const canvas = wrapper?.querySelector('.pdf-canvas');
+
+  if (!canvas) {
+    return 1;
+  }
+
+  const pageWidth =
+    Number(canvas.width) ||
+    Number(canvas.clientWidth) ||
+    1;
+
+  const pageHeight =
+    Number(canvas.height) ||
+    Number(canvas.clientHeight) ||
+    1;
+
+  const { width: viewerWidth, height: viewerHeight } = getViewerSize();
+
+  const viewerAspect = viewerWidth / Math.max(1, viewerHeight);
+  const pageAspect = pageWidth / Math.max(1, pageHeight);
+
+  // fit width 的實際倍率是否比 fit height 大
+  return viewerAspect >= pageAspect ? 1 : -1;
 }
 
 function clampPage(pageNumber) {
@@ -374,6 +443,7 @@ function getPdfCacheKey(pageNumber) {
     currentFilePath,
     pageNumber,
     pageFitMode,
+    zoomProgress.toFixed(3),
     width,
     height,
     dpr
@@ -433,44 +503,6 @@ function isValidClickRelease(event) {
   return dx <= 6 && dy <= 6 && dt <= 350;
 }
 
-function clearPendingSingleClick() {
-  clearTimeout(singleClickTimer);
-  singleClickTimer = null;
-}
-
-function isStrictDoubleClick(event) {
-  if (event.button !== 0) return false;
-
-  if (!lastStrictClickInfo) return false;
-
-  const now = Date.now();
-  const dt = now - lastStrictClickInfo.time;
-  const dx = Math.abs(event.clientX - lastStrictClickInfo.x);
-  const dy = Math.abs(event.clientY - lastStrictClickInfo.y);
-
-  return (
-    dt <= STRICT_DOUBLE_CLICK_MS &&
-    dx <= STRICT_DOUBLE_CLICK_DISTANCE &&
-    dy <= STRICT_DOUBLE_CLICK_DISTANCE
-  );
-}
-
-function rememberStrictClick(event) {
-  lastStrictClickInfo = {
-    x: event.clientX,
-    y: event.clientY,
-    time: Date.now(),
-  };
-}
-
-function shouldIgnoreStrictFullscreenDoubleClick(event) {
-  if (event.button !== 0) return true;
-  if (event.target.closest?.('.reader-toolbar')) return true;
-  if (event.target.closest?.('.pdf-copy-popover')) return true;
-  if (event.target.closest?.('.pdf-selectable-layer')) return true;
-
-  return false;
-}
 
 function stopKeyHoldPageTurn() {
   clearInterval(keyHoldTimer);
@@ -820,18 +852,27 @@ function updateModeButtons() {
 function updateFitButtons() {
   if (!fitToggleBtn) return;
 
-  const isFitHeight = pageFitMode === 'height';
+  const isFitHeight = isFitHeightZoom();
+  const isFitWidth = isFitWidthZoom();
 
-  fitToggleBtn.classList.toggle('active', !isFitHeight);
+  fitToggleBtn.classList.toggle(
+    'active',
+    !isFitHeight && !isFitWidth
+  );
+
   const label = isFitHeight
     ? i18n.t('reader.fitHeight')
-    : i18n.t('reader.fitWidth');
+    : isFitWidth
+      ? i18n.t('reader.fitWidth')
+      : i18n.t('reader.customZoom');
 
   fitToggleBtn.title = label;
   fitToggleBtn.setAttribute('aria-label', label);
 
   if (fitIconSvg) {
-    fitIconSvg.style.transform = isFitHeight ? 'rotate(90deg)' : 'rotate(0deg)';
+    const rotation = 90 * (1 - zoomProgress);
+
+    fitIconSvg.style.transform = `rotate(${rotation}deg)`;
     fitIconSvg.style.transition = 'transform 0.2s ease';
   }
 
@@ -843,26 +884,35 @@ function updateFitButtons() {
   }
 }
 
-function updateFullscreenButton() {
-  if (!fullscreenBtn || !fullscreenIconPath) return;
+function updateZoomButtons() {
+  if (!zoomInBtn || !zoomOutBtn) return;
 
-  const label = isFullscreen
-    ? i18n.t('common.fullscreenExit')
-    : i18n.t('common.fullscreenEnter');
-  fullscreenBtn.title = label;
-  fullscreenBtn.setAttribute('aria-label', label);
+  const endpointDirection = getZoomEndpointDirection();
 
-  if (isFullscreen) {
-    fullscreenIconPath.setAttribute(
-      'd',
-      'M240-120v-120H120v-80h200v200h-80Zm400 0v-200h200v80H720v120h-80ZM120-640v-80h120v-120h80v200H120Zm520 0v-200h80v120h120v80H640Z'
-    );
-  } else {
-    fullscreenIconPath.setAttribute(
-      'd',
-      'M120-120v-200h80v120h120v80H120Zm520 0v-80h120v-120h80v200H640ZM120-640v-200h200v80H200v120h-80Zm640 0v-120H640v-80h200v200h-80Z'
-    );
-  }
+  const atHeight = isFitHeightZoom();
+  const atWidth = isFitWidthZoom();
+
+  /*
+   * 一般直式頁面：
+   *   放大 → width
+   *   縮小 → height
+   *
+   * 橫向頁面若 height 比 width 大，方向自動反轉。
+   */
+  zoomInBtn.disabled =
+    endpointDirection > 0 ? atWidth : atHeight;
+
+  zoomOutBtn.disabled =
+    endpointDirection > 0 ? atHeight : atWidth;
+
+  const zoomInLabel = i18n.t('reader.zoomIn');
+  const zoomOutLabel = i18n.t('reader.zoomOut');
+
+  zoomInBtn.title = zoomInLabel;
+  zoomInBtn.setAttribute('aria-label', zoomInLabel);
+
+  zoomOutBtn.title = zoomOutLabel;
+  zoomOutBtn.setAttribute('aria-label', zoomOutLabel);
 }
 
 function updateReaderContainerModeClass() {
@@ -886,7 +936,7 @@ function updateReaderUiText() {
   updateBookmarkNavTitles();
   updateModeButtons();
   updateFitButtons();
-  updateFullscreenButton();
+  updateZoomButtons();
   updateAutoPlayButton();
 
   if (!copyPopover.classList.contains('copied')) {
@@ -1181,12 +1231,11 @@ async function loadPdfDocument(filePath) {
 
 function getPdfViewportByFit(page) {
   const baseViewport = page.getViewport({ scale: 1 });
-  const { width: viewerWidth, height: viewerHeight } = getViewerSize();
 
-  const scale =
-    pageFitMode === 'width'
-      ? viewerWidth / baseViewport.width
-      : viewerHeight / baseViewport.height;
+  const scale = getInterpolatedViewerScale(
+    baseViewport.width,
+    baseViewport.height
+  );
 
   return page.getViewport({ scale });
 }
@@ -1258,18 +1307,13 @@ async function buildPdfTextMap(page, viewport, pageNumber) {
 }
 
 function applyCanvasDisplaySize(canvas, pixelWidth, pixelHeight) {
-  const { width: viewerWidth, height: viewerHeight } = getViewerSize();
+  const displayScale = getInterpolatedViewerScale(
+    pixelWidth,
+    pixelHeight
+  );
 
-  let displayWidth;
-  let displayHeight;
-
-  if (pageFitMode === 'width') {
-    displayWidth = viewerWidth;
-    displayHeight = (pixelHeight / pixelWidth) * displayWidth;
-  } else {
-    displayHeight = viewerHeight;
-    displayWidth = (pixelWidth / pixelHeight) * displayHeight;
-  }
+  const displayWidth = pixelWidth * displayScale;
+  const displayHeight = pixelHeight * displayScale;
 
   canvas.style.width = `${displayWidth}px`;
   canvas.style.height = `${displayHeight}px`;
@@ -1863,9 +1907,8 @@ async function buildCbzCanvas(pageNumber) {
   const scaleY = viewerHeight / bitmap.height;
 
   const scale =
-    pageFitMode === 'width'
-      ? scaleX
-      : Math.min(scaleX, scaleY);
+    scaleY +
+    (scaleX - scaleY) * zoomProgress;
 
   const targetWidth = Math.max(1, Math.round(bitmap.width * scale));
   const targetHeight = Math.max(1, Math.round(bitmap.height * scale));
@@ -2028,6 +2071,8 @@ async function renderDocumentStructure(anchorPage = currentPage) {
     forceInstant: true,
     animatePagedTurn: false,
   });
+
+  updateZoomButtons();
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
@@ -2222,12 +2267,48 @@ async function setReaderMode(nextMode, force = false) {
   await renderDocumentStructure(anchorPage);
 }
 
-async function setPageFitMode(nextFitMode, force = false) {
-  if (!force && pageFitMode === nextFitMode) return;
+async function setZoomProgress(nextProgress, force = false) {
+  const safeProgress = clampZoomProgress(nextProgress);
+
+  if (
+    !force &&
+    Math.abs(safeProgress - zoomProgress) <= ZOOM_EPSILON
+  ) {
+    return;
+  }
+
+  const wasFitHeight = isFitHeightZoom();
+  const wasFitWidth = isFitWidthZoom();
+
+  const nextIsFitHeight =
+    safeProgress <= ZOOM_EPSILON;
+
+  const nextIsFitWidth =
+    safeProgress >= 1 - ZOOM_EPSILON;
+
+  const nextIsCustom =
+    !nextIsFitHeight && !nextIsFitWidth;
+
+  /*
+   * 只有從 fit height / fit width 進入自訂縮放時，
+   * 才記錄返回位置。
+   *
+   * 自訂縮放之間繼續放大或縮小時，不覆蓋紀錄。
+   */
+  if (nextIsCustom) {
+    if (wasFitHeight) {
+      customZoomReturnFitMode = 'height';
+    } else if (wasFitWidth) {
+      customZoomReturnFitMode = 'width';
+    }
+  }
+
   resetPagedFitWidthBoundaryGuard();
 
   const anchorPage = getCurrentAnchorPage();
-  pageFitMode = nextFitMode;
+
+  zoomProgress = safeProgress;
+  syncPageFitModeWithZoom();
   currentPage = anchorPage;
 
   if (isAutoPlaying && !canUseAutoPlay()) {
@@ -2237,11 +2318,34 @@ async function setPageFitMode(nextFitMode, force = false) {
   clearPdfCache();
   clearCbzCache();
 
+  pdfTextMapByPage.clear();
+  clearCustomPdfSelection();
+
   updateReaderContainerModeClass();
   updateFitButtons();
+  updateZoomButtons();
   updateAutoPlayButton();
 
   await renderDocumentStructure(anchorPage);
+
+  updateZoomButtons();
+}
+
+async function changeZoom(direction) {
+  const endpointDirection = getZoomEndpointDirection();
+
+  const delta =
+    ZOOM_STEP *
+    endpointDirection *
+    (direction > 0 ? 1 : -1);
+
+  await setZoomProgress(zoomProgress + delta);
+}
+
+async function setPageFitMode(nextFitMode, force = false) {
+  const nextProgress = nextFitMode === 'width' ? 1 : 0;
+
+  await setZoomProgress(nextProgress, force);
 }
 
 function canTurnPageInPagedFitWidth(deltaY) {
@@ -2378,7 +2482,6 @@ async function toggleFullscreen() {
 
     isFullscreen = await window.readerAPI.toggleFullscreen();
     document.body.classList.toggle('fullscreen-mode', isFullscreen);
-    updateFullscreenButton();
 
     await waitForViewerSizeToStabilize();
 
@@ -2432,7 +2535,9 @@ async function initReader() {
   bookType = 'pdf';
   readerMode = 'paged';
   pageFitMode = 'height';
+  zoomProgress = 0;
   currentPage = 1;
+  customZoomReturnFitMode = 'height';
   totalPages = 0;
   lastReaderScrollTop = 0;
 
@@ -2449,8 +2554,8 @@ async function initReader() {
   isAutoPlaying = false;
 
   updateFitButtons();
+  updateZoomButtons();
   updateModeButtons();
-  updateFullscreenButton();
   updateAutoPlayButton();
   updatePageIndicator();
   updateFavoriteButton();
@@ -2655,13 +2760,33 @@ favoriteBtn?.addEventListener('click', async () => {
   await toggleFavorite();
 });
 
-fullscreenBtn?.addEventListener('click', async () => {
-  await toggleFullscreen();
+fitToggleBtn?.addEventListener('click', async () => {
+  const isCustomZoom =
+    !isFitHeightZoom() &&
+    !isFitWidthZoom();
+
+  // 自訂縮放時，回到進入自訂縮放前的 fit 狀態
+  if (isCustomZoom) {
+    await setPageFitMode(customZoomReturnFitMode);
+    return;
+  }
+
+  // 位於兩個端點時，維持原本的 height / width 切換
+  const nextMode = isFitHeightZoom()
+    ? 'width'
+    : 'height';
+
+  await setPageFitMode(nextMode);
 });
 
-fitToggleBtn?.addEventListener('click', async () => {
-  const nextMode = pageFitMode === 'height' ? 'width' : 'height';
-  await setPageFitMode(nextMode);
+zoomOutBtn?.addEventListener('click', async () => {
+  if (zoomOutBtn.disabled) return;
+  await changeZoom(-1);
+});
+
+zoomInBtn?.addEventListener('click', async () => {
+  if (zoomInBtn.disabled) return;
+  await changeZoom(1);
 });
 
 modeToggleBtn?.addEventListener('click', async () => {
@@ -2723,6 +2848,31 @@ document.addEventListener('keydown', async (event) => {
   }
 
   if (isPageIndicatorEditing) return;
+
+  const activeElement = document.activeElement;
+  const isInteractiveElement =
+    activeElement instanceof HTMLInputElement ||
+    activeElement instanceof HTMLTextAreaElement ||
+    activeElement instanceof HTMLSelectElement ||
+    activeElement instanceof HTMLButtonElement ||
+    activeElement instanceof HTMLAnchorElement ||
+    activeElement?.isContentEditable;
+
+  if (
+    event.code === 'Space' &&
+    !event.ctrlKey &&
+    !event.altKey &&
+    !event.metaKey &&
+    !isInteractiveElement
+  ) {
+    event.preventDefault();
+
+    // 避免按住空白鍵時不斷反覆切換
+    if (event.repeat) return;
+
+    await toggleFullscreen();
+    return;
+  }
 
   if (event.key === 'Escape' && isFullscreen) {
     await toggleFullscreen();
@@ -2984,21 +3134,7 @@ readerContainer.addEventListener('mouseup', async (event) => {
 
   if (!isValidClickRelease(event)) return;
 
-  if (!shouldIgnoreStrictFullscreenDoubleClick(event) && isStrictDoubleClick(event)) {
-    clearPendingSingleClick();
-    lastStrictClickInfo = null;
-    await toggleFullscreen();
-    return;
-  }
-
-  rememberStrictClick(event);
-
-  clearPendingSingleClick();
-
-  singleClickTimer = setTimeout(async () => {
-    await handleReaderClickCommand(event);
-    singleClickTimer = null;
-  }, STRICT_DOUBLE_CLICK_MS);
+  await handleReaderClickCommand(event);
 });
 
 window.addEventListener('mouseup', () => {
