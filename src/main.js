@@ -654,6 +654,45 @@ function clearHistoryLibraryMeta(folderPath) {
   }
 }
 
+function clearCurrentLibrary(folderPath) {
+  if (!folderPath || !fs.existsSync(folderPath)) {
+    return {
+      cleared: false,
+      history: getLibraryHistory(),
+    };
+  }
+
+  // 停止監控目前書庫
+  stopLibraryWatcher();
+
+  // 沿用歷史書庫的 .myreader 與歷史紀錄清除功能
+  const result = clearHistoryLibraryMeta(folderPath);
+
+  if (!result?.cleared) {
+    return result;
+  }
+
+  const state = loadAppState();
+
+  // 回到無書庫狀態
+  state.lastLibraryFolder = '';
+  state.lastSelectedBookPath = '';
+
+  // 避免無書庫時左上角仍顯示舊自訂名稱
+  state.settings = {
+    ...state.settings,
+    displayLibraryName: '',
+  };
+
+  saveAppState(state);
+  broadcastSettingsUpdate(state.settings);
+
+  return {
+    cleared: true,
+    history: result.history,
+  };
+}
+
 function clearAllReadingProgress() {
   const state = loadAppState();
   state.readingProgress = {};
@@ -1418,6 +1457,10 @@ function registerFolderIpc() {
 
   ipcMain.handle('clear-history-library-meta', async (_event, folderPath) => {
     return clearHistoryLibraryMeta(folderPath);
+  });
+
+  ipcMain.handle('clear-current-library', async (_event, folderPath) => {
+    return clearCurrentLibrary(folderPath);
   });
 }
 

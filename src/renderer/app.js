@@ -219,6 +219,41 @@ const INITIAL_LANGUAGE_SYSTEM_ICON = `
   </span>
 `;
 
+const LIBRARY_EMPTY_SETTINGS_ICON = `
+  <span class="library-empty-inline-icon" aria-hidden="true">
+    <svg viewBox="0 -960 960 960">
+      <path
+        d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm112-260q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Z"
+        fill="currentColor">
+      </path>
+    </svg>
+  </span>
+`;
+
+const LIBRARY_EMPTY_LIBRARY_ICON = `
+  <span class="library-empty-inline-icon" aria-hidden="true">
+    <svg viewBox="0 -960 960 960">
+      <path
+        d="M120-40v-880h80v80h560v-80h80v880h-80v-80H200v80h-80Zm80-480h80v-160h240v160h240v-240H200v240Zm0 320h240v-160h240v160h80v-240H200v240Z"
+        fill="currentColor">
+      </path>
+    </svg>
+  </span>
+`;
+
+function getNoLibraryGuideMarkup() {
+  return `
+    <div class="library-empty-guide">
+      <div class="library-empty-guide-text">
+        ${i18n.t('library.createLibraryHint', {
+    settingsIcon: LIBRARY_EMPTY_SETTINGS_ICON,
+    libraryIcon: LIBRARY_EMPTY_LIBRARY_ICON,
+  })}
+      </div>
+    </div>
+  `;
+}
+
 function getInitialLanguageDialogText(language) {
   const safeLanguage = normalizeLanguage(language);
 
@@ -1326,7 +1361,13 @@ function renderDetailPanel() {
   const selectedBook = getBookById(selectedBookId);
 
   if (!selectedBook) {
-    detailPanel.innerHTML = `<div class="detail-empty">${i18n.t('library.selectBookFirst')}</div>`;
+    const emptyText = currentLibraryPath
+      ? i18n.t('library.selectBookFirst')
+      : i18n.t('library.noLibrary');
+
+    detailPanel.innerHTML = `
+      <div class="detail-empty">${emptyText}</div>
+    `;
     return;
   }
 
@@ -1519,17 +1560,43 @@ async function setBookFavorite(bookId, isFavorite) {
  * 這個函式只在重新掃描或排序可能改變時重建
  */
 async function renderBookGrid() {
-  const sortedBooks = getSearchMatchedBooks();
+  if (!bookGrid) return;
 
-  if (sortedBooks.length === 0) {
-    bookGrid.innerHTML = hasBookSearchKeyword()
-      ? `<div class="search-empty-message">${i18n.t('library.noSearchResult')}</div>`
-      : `<div>${i18n.t('library.noBooks')}</div>`;
+  // 尚未建立或選取書庫
+  if (!currentLibraryPath) {
+    selectedBookId = null;
+
+    bookGrid.classList.add('library-empty-state');
+    bookGrid.innerHTML = getNoLibraryGuideMarkup();
 
     renderDetailPanel();
     await renderRecentReadingSection();
     return;
   }
+
+  const sortedBooks = getSearchMatchedBooks();
+
+  if (sortedBooks.length === 0) {
+    bookGrid.classList.add('library-empty-state');
+
+    bookGrid.innerHTML = hasBookSearchKeyword()
+      ? `
+      <div class="library-empty-message search-empty-message">
+        ${i18n.t('library.noSearchResult')}
+      </div>
+    `
+      : `
+      <div class="library-empty-message">
+        ${i18n.t('library.noBooks')}
+      </div>
+    `;
+
+    renderDetailPanel();
+    await renderRecentReadingSection();
+    return;
+  }
+
+  bookGrid.classList.remove('library-empty-state');
 
   bookGrid.innerHTML = sortedBooks.map((book) => `
     <div class="book-card ${book.id === selectedBookId ? 'selected' : ''} ${isFavoriteBook(book) ? 'favorite' : ''}" data-book-id="${book.id}">
@@ -1822,10 +1889,17 @@ async function loadAppSettings() {
  * 還原上次開啟的書庫
  */
 async function restoreLastLibrary() {
-  if (!window.readerAPI?.getLastLibraryFolder) return;
+  if (!window.readerAPI?.getLastLibraryFolder) {
+    await renderBookGrid();
+    return;
+  }
 
   const folderPath = await window.readerAPI.getLastLibraryFolder();
-  if (!folderPath) return;
+
+  if (!folderPath) {
+    await renderBookGrid();
+    return;
+  }
 
   currentLibraryPath = folderPath;
   renderLibraryTitle();

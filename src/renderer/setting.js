@@ -610,6 +610,8 @@ function renderLibrarySection() {
     ? settings.bookSortMode
     : 'none';
 
+  const canClearCurrentLibrary = Boolean(currentLibraryPath);
+
   settingsContent.innerHTML = `
     <h1 class="settings-section-title">${t('settings.titleLibrary')}</h1>
 
@@ -619,6 +621,15 @@ function renderLibrarySection() {
         <button id="pick-folder-btn" class="settings-control" type="button">
           ${t('settings.pickLibraryFolder')}
         </button>
+      </div>
+      <div class="settings-block">
+      <button
+      id="clear-current-library-btn"
+      class="settings-action-button settings-control danger-button"
+      type="button"
+      ${canClearCurrentLibrary ? '' : 'disabled'}>
+      ${t('settings.clearCurrentLibraryFolder')}
+      </button>
       </div>
       <div class="settings-hint">${t('settings.libraryFolderHint')}</div>
     </div>
@@ -695,6 +706,40 @@ function renderLibrarySection() {
     await applyLibraryChange(folderPath);
 
     renderSection();
+  });
+
+  document.getElementById('clear-current-library-btn')?.addEventListener('click', async () => {
+    if (!currentLibraryPath) return;
+
+    const targetLibraryPath = currentLibraryPath;
+
+    const confirmed = await showConfirmDialog({
+      title: t('settings.clearCurrentLibrary'),
+      message: t('settings.clearHistoryLibraryMessage'),
+      detail: targetLibraryPath,
+      note: t('settings.clearHistoryLibraryNote'),
+      confirmText: t('common.confirm'),
+      cancelText: t('common.cancel'),
+    });
+
+    if (!confirmed) return;
+
+    const result = await window.readerAPI.clearCurrentLibrary?.(
+      targetLibraryPath
+    );
+
+    if (!result?.cleared) return;
+
+    currentLibraryPath = '';
+    pendingHistoryLibraryPath = '';
+
+    libraryHistoryPaths = Array.isArray(result.history)
+      ? result.history
+      : [];
+
+    settings.displayLibraryName = '';
+
+    await window.readerAPI.openLibraryPage();
   });
 
   const input = document.getElementById('display-library-name-input');

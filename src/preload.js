@@ -81,4 +81,6 @@ contextBridge.exposeInMainWorld('readerAPI', {
     ipcRenderer.invoke('open-history-library-folder', folderPath),
   clearHistoryLibraryMeta: (folderPath) =>
     ipcRenderer.invoke('clear-history-library-meta', folderPath),
+  clearCurrentLibrary: (folderPath) =>
+    ipcRenderer.invoke('clear-current-library', folderPath),
 });
