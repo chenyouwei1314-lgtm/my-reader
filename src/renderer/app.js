@@ -264,7 +264,7 @@ function getInitialLanguageDialogText(language) {
       confirm: '確認',
       noteHtml: `
         <span class="initial-language-note-line">
-          之後可到
+          之後可以到
           ${INITIAL_LANGUAGE_SETTINGS_ICON}
           /
           ${INITIAL_LANGUAGE_SYSTEM_ICON}
