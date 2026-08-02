@@ -2877,18 +2877,21 @@ document.addEventListener('keydown', async (event) => {
 
   if (isPageIndicatorEditing) return;
 
-  const activeElement = document.activeElement;
+  const keyboardTarget = event.target;
 
   const isTypingElement =
-    activeElement instanceof HTMLInputElement ||
-    activeElement instanceof HTMLTextAreaElement ||
-    activeElement instanceof HTMLSelectElement ||
-    activeElement?.isContentEditable;
-
-  const isInteractiveElement =
-    isTypingElement ||
-    activeElement instanceof HTMLButtonElement ||
-    activeElement instanceof HTMLAnchorElement;
+    (
+      keyboardTarget instanceof HTMLInputElement &&
+      !keyboardTarget.readOnly &&
+      !keyboardTarget.disabled
+    ) ||
+    (
+      keyboardTarget instanceof HTMLTextAreaElement &&
+      !keyboardTarget.readOnly &&
+      !keyboardTarget.disabled
+    ) ||
+    keyboardTarget instanceof HTMLSelectElement ||
+    keyboardTarget?.isContentEditable;
 
   // =========================================================
   // 全螢幕：Space
@@ -2898,7 +2901,7 @@ document.addEventListener('keydown', async (event) => {
     !event.ctrlKey &&
     !event.altKey &&
     !event.metaKey &&
-    !isInteractiveElement
+    !isTypingElement
   ) {
     event.preventDefault();
 
@@ -2926,7 +2929,10 @@ document.addEventListener('keydown', async (event) => {
 
   if (
     hasZoomModifier &&
-    event.code === 'Minus'
+    (
+      event.code === 'Minus' ||
+      event.code === 'NumpadSubtract'
+    )
   ) {
     event.preventDefault();
 
@@ -2940,7 +2946,10 @@ document.addEventListener('keydown', async (event) => {
 
   if (
     hasZoomModifier &&
-    event.code === 'Equal'
+    (
+      event.code === 'Equal' ||
+      event.code === 'NumpadAdd'
+    )
   ) {
     event.preventDefault();
 
