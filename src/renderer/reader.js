@@ -57,6 +57,7 @@ let contentReadingMode = 'document'; // 'document' | 'comic'
 let zoomProgress = 0;
 const ZOOM_STEP = 0.1;
 const ZOOM_EPSILON = 0.0001;
+const PDF_DEFAULT_ZOOM_PROGRESS = 0.5;
 let customZoomReturnFitMode = 'height';
 let pageClickCommand = [];
 let scrollHoldCommand = [];
@@ -2265,6 +2266,30 @@ async function prevPage(options = {}) {
 // =========================================================
 // Mode / Fit 切換
 // =========================================================
+function applyDefaultViewForBookType() {
+  resetPagedFitWidthBoundaryGuard();
+
+  if (bookType === 'pdf') {
+    readerMode = 'scroll';
+    zoomProgress = PDF_DEFAULT_ZOOM_PROGRESS;
+
+    syncPageFitModeWithZoom();
+
+    customZoomReturnFitMode = 'height';
+  } else {
+    readerMode = 'paged';
+    zoomProgress = 0;
+    pageFitMode = 'height';
+    customZoomReturnFitMode = 'height';
+  }
+
+  updateReaderContainerModeClass();
+  updateModeButtons();
+  updateFitButtons();
+  updateZoomButtons();
+  updateAutoPlayButton();
+}
+
 async function toggleFitMode() {
   const isCustomZoom =
     !isFitHeightZoom() &&
@@ -2625,6 +2650,8 @@ async function initReader() {
       showLoading(i18n.t('reader.unsupportedFile'));
       return;
     }
+
+    applyDefaultViewForBookType();
 
     await restoreReadingProgress();
 
